@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 	drmModeCrtc *crtc;
 	drmModeConnector *connector;
 	struct hwc_output *output;
-	struct hwc_layer *layers[3];
+	struct hwc_layer *layers[4];
 	drmModeAtomicReq *req;
 	int ret;
 
@@ -178,6 +178,7 @@ int main(int argc, char *argv[])
 			      crtc->mode.vdisplay, false);
 	layers[1] = add_layer(drm_fd, output, 50, 50, 256, 256, true);
 	layers[2] = add_layer(drm_fd, output, 500, 500, 128, 128, false);
+	layers[3] = add_layer(drm_fd, output, 700, 700, 128, 128, true);
 
 	req = drmModeAtomicAlloc();
 	if (!hwc_display_apply(display, req)) {
@@ -204,6 +205,7 @@ int main(int argc, char *argv[])
 	hwc_layer_destroy(layers[0]);
 	hwc_layer_destroy(layers[1]);
 	hwc_layer_destroy(layers[2]);
+	hwc_layer_destroy(layers[3]);
 	hwc_output_destroy(output);
 	drmModeFreeCrtc(crtc);
 	drmModeFreeConnector(connector);
