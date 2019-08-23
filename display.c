@@ -191,6 +191,9 @@ static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 
 	for (i = 0; i < display->planes_len; i++) {
 		plane = &display->planes[i];
+		if (plane->layer != NULL) {
+			continue;
+		}
 
 		fprintf(stderr, "Trying to apply layer %p with plane %d...\n",
 			(void *)layer, plane->id);
