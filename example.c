@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
 	struct hwc_layer *layers[4];
 	drmModeAtomicReq *req;
 	int ret;
+	size_t i;
 
 	drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
 	if (drm_fd < 0) {
@@ -192,20 +193,17 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
-	printf("Layer 0 got assigned to plane %u\n",
-	       hwc_layer_get_plane_id(layers[0]));
-	printf("Layer 1 got assigned to plane %u\n",
-	       hwc_layer_get_plane_id(layers[1]));
-	printf("Layer 2 got assigned to plane %u\n",
-	       hwc_layer_get_plane_id(layers[2]));
+	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
+		printf("Layer %zu got assigned to plane %u\n", i,
+		       hwc_layer_get_plane_id(layers[i]));
+	}
 
 	sleep(1);
 
 	drmModeAtomicFree(req);
-	hwc_layer_destroy(layers[0]);
-	hwc_layer_destroy(layers[1]);
-	hwc_layer_destroy(layers[2]);
-	hwc_layer_destroy(layers[3]);
+	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
+		hwc_layer_destroy(layers[i]);
+	}
 	hwc_output_destroy(output);
 	drmModeFreeCrtc(crtc);
 	drmModeFreeConnector(connector);
