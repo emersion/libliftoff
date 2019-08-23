@@ -113,8 +113,8 @@ void hwc_display_destroy(struct hwc_display *display)
 	free(display);
 }
 
-struct hwc_plane_property *plane_get_property(struct hwc_plane *plane,
-					      const char *name)
+static struct hwc_plane_property *plane_get_property(struct hwc_plane *plane,
+						     const char *name)
 {
 	size_t i;
 
@@ -126,8 +126,8 @@ struct hwc_plane_property *plane_get_property(struct hwc_plane *plane,
 	return NULL;
 }
 
-bool layer_apply(struct hwc_layer *layer, struct hwc_plane *plane,
-		 drmModeAtomicReq *req)
+static bool layer_apply(struct hwc_layer *layer, struct hwc_plane *plane,
+			drmModeAtomicReq *req)
 {
 	size_t i;
 	int ret;
@@ -169,7 +169,7 @@ bool layer_apply(struct hwc_layer *layer, struct hwc_plane *plane,
 	return true;
 }
 
-bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
+static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 {
 	struct hwc_display *display;
 	int cursor;
