@@ -227,12 +227,23 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 	struct hwc_layer *layer;
 	struct hwc_plane *plane;
 
-	/* TODO: incremental updates keeping old configuration if possible */
+	/* Unset all existing plane and layer mappings.
+	   TODO: incremental updates keeping old configuration if possible */
 	for (i = 0; i < display->planes_len; i++) {
 		plane = &display->planes[i];
 		if (plane->layer != NULL) {
 			plane->layer->plane = NULL;
 			plane->layer = NULL;
+		}
+	}
+
+	/* Disable all planes. Do it before building mappings to make sure not
+	   to hit bandwidth limits because too many planes are enabled. */
+	for (i = 0; i < display->planes_len; i++) {
+		plane = &display->planes[i];
+		if (plane->layer == NULL) {
+			fprintf(stderr, "Disabling plane %d\n", plane->id);
+			plane_apply(plane, NULL, req);
 		}
 	}
 
@@ -243,14 +254,6 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 					"Failed to find plane for layer %p\n",
 					(void *)layer);
 			}
-		}
-	}
-
-	for (i = 0; i < display->planes_len; i++) {
-		plane = &display->planes[i];
-		if (plane->layer == NULL) {
-			fprintf(stderr, "Disabling plane %d\n", plane->id);
-			plane_apply(plane, NULL, req);
 		}
 	}
 
