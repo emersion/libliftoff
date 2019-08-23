@@ -219,13 +219,19 @@ static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 
 bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 {
-	int cursor;
 	size_t i;
 	struct hwc_output *output;
 	struct hwc_layer *layer;
 	struct hwc_plane *plane;
 
-	cursor = drmModeAtomicGetCursor(req);
+	/* TODO: incremental updates keeping old configuration if possible */
+	for (i = 0; i < display->planes_len; i++) {
+		plane = &display->planes[i];
+		if (plane->layer != NULL) {
+			plane->layer->plane = NULL;
+			plane->layer = NULL;
+		}
+	}
 
 	hwc_list_for_each(output, &display->outputs, link) {
 		hwc_list_for_each(layer, &output->layers, link) {
@@ -233,8 +239,6 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 				fprintf(stderr,
 					"Failed to find plane for layer %p\n",
 					(void *)layer);
-				drmModeAtomicSetCursor(req, cursor);
-				return false;
 			}
 		}
 	}
