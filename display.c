@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdlib.h>
@@ -126,23 +127,37 @@ static struct hwc_plane_property *plane_get_property(struct hwc_plane *plane,
 	return NULL;
 }
 
-static bool layer_apply(struct hwc_layer *layer, struct hwc_plane *plane,
+static bool plane_set_prop(struct hwc_plane *plane, drmModeAtomicReq *req,
+			   struct hwc_plane_property *prop, uint64_t value)
+{
+	int ret;
+
+	fprintf(stderr, "  Setting %s = %"PRIu64"\n", prop->name, value);
+	ret = drmModeAtomicAddProperty(req, plane->id, prop->id, value);
+	if (ret < 0) {
+		perror("drmModeAtomicAddProperty");
+		return false;
+	}
+
+	return true;
+}
+
+static bool plane_apply(struct hwc_plane *plane, struct hwc_layer *layer,
 			drmModeAtomicReq *req)
 {
 	size_t i;
-	int ret;
 	struct hwc_layer_property *layer_prop;
 	struct hwc_plane_property *plane_prop;
 
-	/* TODO: disable planes that aren't used */
+	if (layer == NULL) {
+		plane_prop = plane_get_property(plane, "FB_ID");
+		assert(plane_prop);
+		return plane_set_prop(plane, req, plane_prop, 0);
+	}
 
-	fprintf(stderr, "  Setting CRTC_ID = %"PRIu32"\n",
-		layer->output->crtc_id);
 	plane_prop = plane_get_property(plane, "CRTC_ID");
-	ret = drmModeAtomicAddProperty(req, plane->id, plane_prop->id,
-				       layer->output->crtc_id);
-	if (ret < 0) {
-		perror("drmModeAtomicAddProperty");
+	assert(plane_prop);
+	if (!plane_set_prop(plane, req, plane_prop, layer->output->crtc_id)) {
 		return false;
 	}
 
@@ -155,13 +170,7 @@ static bool layer_apply(struct hwc_layer *layer, struct hwc_plane *plane,
 			return false;
 		}
 
-		fprintf(stderr, "  Setting %s = %"PRIu64"\n", layer_prop->name,
-			layer_prop->value);
-		ret = drmModeAtomicAddProperty(req, plane->id,
-					       plane_prop->id,
-					       layer_prop->value);
-		if (ret < 0) {
-			perror("drmModeAtomicAddProperty");
+		if (!plane_set_prop(plane, req, plane_prop, layer_prop->value)) {
 			return false;
 		}
 	}
@@ -185,7 +194,7 @@ static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 
 		fprintf(stderr, "Trying to apply layer %p with plane %d...\n",
 			(void *)layer, plane->id);
-		if (!layer_apply(layer, plane, req)) {
+		if (!plane_apply(plane, layer, req)) {
 			return false;
 		}
 
@@ -194,6 +203,7 @@ static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 		if (ret == 0) {
 			fprintf(stderr, "Success\n");
 			layer->plane = plane;
+			plane->layer = layer;
 			return true;
 		} else if (-ret != EINVAL && -ret != ERANGE) {
 			perror("drmModeAtomicCommit");
@@ -210,8 +220,10 @@ static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 {
 	int cursor;
+	size_t i;
 	struct hwc_output *output;
 	struct hwc_layer *layer;
+	struct hwc_plane *plane;
 
 	cursor = drmModeAtomicGetCursor(req);
 
@@ -224,6 +236,14 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 				drmModeAtomicSetCursor(req, cursor);
 				return false;
 			}
+		}
+	}
+
+	for (i = 0; i < display->planes_len; i++) {
+		plane = &display->planes[i];
+		if (plane->layer == NULL) {
+			fprintf(stderr, "Disabling plane %d\n", plane->id);
+			plane_apply(plane, NULL, req);
 		}
 	}
 

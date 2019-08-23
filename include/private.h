@@ -43,6 +43,8 @@ struct hwc_plane {
 
 	struct hwc_plane_property *props;
 	size_t props_len;
+
+	struct hwc_layer *layer;
 };
 
 struct hwc_plane_property {
