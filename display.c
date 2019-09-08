@@ -179,52 +179,110 @@ static bool plane_apply(struct hwc_plane *plane, struct hwc_layer *layer,
 	return true;
 }
 
-static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
+struct plane_alloc {
+	drmModeAtomicReq *req;
+	size_t planes_len;
+	struct hwc_layer **current;
+	struct hwc_layer **best;
+	int best_score;
+};
+
+bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
+			  struct hwc_list *cur, size_t plane_idx, int score)
 {
 	struct hwc_display *display;
-	int cursor;
 	struct hwc_plane *plane;
-	int ret;
+	struct hwc_layer *layer;
+	int cursor, ret;
+	size_t remaining_planes, i;
+	bool found;
 
-	display = layer->output->display;
-	cursor = drmModeAtomicGetCursor(req);
+	display = output->display;
 
-	hwc_list_for_each(plane, &display->planes, link) {
-		if (plane->layer != NULL) {
+	if (cur == &display->planes) { /* Allocation finished */
+		if (score > alloc->best_score) {
+			/* We found a better allocation */
+			alloc->best_score = score;
+			memcpy(alloc->best, alloc->current,
+			       alloc->planes_len * sizeof(struct hwc_layer *));
+		}
+		return true;
+	}
+	plane = hwc_container_of(cur, plane, link);
+
+	remaining_planes = alloc->planes_len - plane_idx;
+	if (alloc->best_score >= (int)remaining_planes) {
+		/* Even if we find a layer for all remaining planes, we won't
+		 * find a better allocation. Give up. */
+		return true;
+	}
+
+	cursor = drmModeAtomicGetCursor(alloc->req);
+
+	if (plane->layer != NULL) {
+		goto skip;
+	}
+
+	hwc_list_for_each(layer, &output->layers, link) {
+		if (layer->plane != NULL) {
 			continue;
 		}
 
+		found = false;
+		for (i = 0; i < plane_idx; i++) {
+			if (alloc->current[i] == layer) {
+				found = true;
+				break;
+			}
+		}
+		if (found) {
+			continue;
+		}
+
+		/* Try to use this layer for the current plane */
+		alloc->current[plane_idx] = layer;
 		fprintf(stderr, "Trying to apply layer %p with plane %d...\n",
 			(void *)layer, plane->id);
-		if (!plane_apply(plane, layer, req)) {
+		if (!plane_apply(plane, layer, alloc->req)) {
 			return false;
 		}
 
-		ret = drmModeAtomicCommit(display->drm_fd, req,
+		ret = drmModeAtomicCommit(display->drm_fd, alloc->req,
 					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
 		if (ret == 0) {
 			fprintf(stderr, "Success\n");
-			layer->plane = plane;
-			plane->layer = layer;
-			return true;
+			/* Continue with the next plane */
+			if (!output_choose_layers(output, alloc, cur->next,
+						  plane_idx + 1, score + 1)) {
+				return false;
+			}
 		} else if (-ret != EINVAL && -ret != ERANGE) {
 			perror("drmModeAtomicCommit");
 			return false;
 		}
 
-		fprintf(stderr, "Failure\n");
-		drmModeAtomicSetCursor(req, cursor);
+		drmModeAtomicSetCursor(alloc->req, cursor);
 	}
 
-	fprintf(stderr, "Failed to find plane for layer %p\n", (void *)layer);
+skip:
+	/* Try not to use the current plane */
+	alloc->current[plane_idx] = NULL;
+	if (!output_choose_layers(output, alloc, cur->next,
+				  plane_idx + 1, score)) {
+		return false;
+	}
+	drmModeAtomicSetCursor(alloc->req, cursor);
+
 	return true;
 }
 
 bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 {
 	struct hwc_output *output;
-	struct hwc_layer *layer;
 	struct hwc_plane *plane;
+	struct hwc_layer *layer;
+	struct plane_alloc alloc;
+	size_t i;
 
 	/* Unset all existing plane and layer mappings.
 	   TODO: incremental updates keeping old configuration if possible */
@@ -246,13 +304,59 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 		}
 	}
 
+	alloc.req = req;
+	alloc.planes_len = hwc_list_length(&display->planes);
+	alloc.current = malloc(alloc.planes_len * sizeof(*alloc.current));
+	alloc.best = malloc(alloc.planes_len * sizeof(*alloc.best));
+	if (alloc.current == NULL || alloc.best == NULL) {
+		perror("malloc");
+		return false;
+	}
+
+	/* TODO: maybe start by allocating the primary plane on each output to
+	 * make sure we can display at least something without hitting bandwidth
+	 * issues? Also: be fair when mapping planes to outputs, don't give all
+	 * planes to a single output. Also: don't treat each output separately,
+	 * allocate planes for all outputs at once. */
 	hwc_list_for_each(output, &display->outputs, link) {
-		hwc_list_for_each(layer, &output->layers, link) {
-			if (!layer_choose_plane(layer, req)) {
+		/* For each plane, try to find a layer. Don't do it the other
+		 * way around (ie. for each layer, try to find a plane) because
+		 * some drivers want user-space to enable the primary plane
+		 * before any other plane. */
+
+		alloc.best_score = 0;
+		if (!output_choose_layers(output, &alloc, display->planes.next,
+					  0, 0)) {
+			return false;
+		}
+
+		fprintf(stderr, "Found plane allocation for output %p "
+			"with score=%d\n", (void *)output, alloc.best_score);
+
+		/* Apply the best allocation */
+		i = 0;
+		hwc_list_for_each(plane, &display->planes, link) {
+			layer = alloc.best[i];
+			i++;
+			if (layer == NULL) {
+				continue;
+			}
+
+			fprintf(stderr, "Assigning layer %p to plane %d\n",
+				(void *)layer, plane->id);
+			if (!plane_apply(plane, layer, req)) {
 				return false;
 			}
+
+			assert(plane->layer == NULL);
+			assert(layer->plane == NULL);
+			plane->layer = layer;
+			layer->plane = plane;
 		}
 	}
+
+	free(alloc.current);
+	free(alloc.best);
 
 	return true;
 }

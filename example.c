@@ -90,7 +90,7 @@ static uint32_t create_argb_fb(int drm_fd, uint32_t width, uint32_t height,
 }
 
 /* ARGB */
-static const uint32_t colors[] = {0xFFFF0000, 0xFF00FF00, 0xFF0000FF};
+static const uint32_t colors[] = {0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00};
 
 static struct hwc_layer *add_layer(int drm_fd, struct hwc_output *output,
 				   int x, int y, int width, int height,
