@@ -7,18 +7,23 @@
 #include <unistd.h>
 #include "private.h"
 
-static bool plane_init(struct hwc_plane *plane, struct hwc_display *display,
-		       int32_t id)
+static struct hwc_plane *plane_create(struct hwc_display *display, int32_t id)
 {
+	struct hwc_plane *plane;
 	drmModePlane *drm_plane;
 	drmModeObjectProperties *drm_props;
 	uint32_t i;
 	drmModePropertyRes *drm_prop;
 	struct hwc_plane_property *prop;
 
+	plane = calloc(1, sizeof(*plane));
+	if (plane == NULL) {
+		return NULL;
+	}
+
 	drm_plane = drmModeGetPlane(display->drm_fd, id);
 	if (drm_plane == NULL) {
-		return false;
+		return NULL;
 	}
 	plane->id = drm_plane->plane_id;
 	plane->possible_crtcs = drm_plane->possible_crtcs;
@@ -27,20 +32,20 @@ static bool plane_init(struct hwc_plane *plane, struct hwc_display *display,
 	drm_props = drmModeObjectGetProperties(display->drm_fd, id,
 					       DRM_MODE_OBJECT_PLANE);
 	if (drm_props == NULL) {
-		return false;
+		return NULL;
 	}
 	plane->props = calloc(drm_props->count_props,
 			      sizeof(struct hwc_plane_property));
 	if (plane->props == NULL) {
 		drmModeFreeObjectProperties(drm_props);
-		return false;
+		return NULL;
 	}
 	for (i = 0; i < drm_props->count_props; i++) {
 		drm_prop = drmModeGetProperty(display->drm_fd,
 					      drm_props->props[i]);
 		if (drm_prop == NULL) {
 			drmModeFreeObjectProperties(drm_props);
-			return false;
+			return NULL;
 		}
 		prop = &plane->props[i];
 		memcpy(prop->name, drm_prop->name, sizeof(prop->name));
@@ -50,12 +55,16 @@ static bool plane_init(struct hwc_plane *plane, struct hwc_display *display,
 	}
 	drmModeFreeObjectProperties(drm_props);
 
-	return true;
+	hwc_list_insert(display->planes.prev, &plane->link);
+
+	return plane;
 }
 
-static void plane_finish(struct hwc_plane *plane)
+static void plane_destroy(struct hwc_plane *plane)
 {
+	hwc_list_remove(&plane->link);
 	free(plane->props);
+	free(plane);
 }
 
 struct hwc_display *hwc_display_create(int drm_fd)
@@ -74,6 +83,7 @@ struct hwc_display *hwc_display_create(int drm_fd)
 		return NULL;
 	}
 
+	hwc_list_init(&display->planes);
 	hwc_list_init(&display->outputs);
 
 	/* TODO: allow users to choose which layers to hand over */
@@ -83,19 +93,11 @@ struct hwc_display *hwc_display_create(int drm_fd)
 		return NULL;
 	}
 
-	display->planes = calloc(drm_plane_res->count_planes,
-				 sizeof(struct hwc_plane));
-	if (display->planes == NULL) {
-		hwc_display_destroy(display);
-		return NULL;
-	}
 	for (i = 0; i < drm_plane_res->count_planes; i++) {
-		if (!plane_init(&display->planes[i], display,
-				drm_plane_res->planes[i])) {
+		if (plane_create(display, drm_plane_res->planes[i]) == NULL) {
 			hwc_display_destroy(display);
 			return NULL;
 		}
-		display->planes_len++;
 	}
 	drmModeFreePlaneResources(drm_plane_res);
 
@@ -104,13 +106,12 @@ struct hwc_display *hwc_display_create(int drm_fd)
 
 void hwc_display_destroy(struct hwc_display *display)
 {
-	size_t i;
+	struct hwc_plane *plane, *tmp;
 
 	close(display->drm_fd);
-	for (i = 0; i < display->planes_len; i++) {
-		plane_finish(&display->planes[i]);
+	hwc_list_for_each_safe(plane, tmp, &display->planes, link) {
+		plane_destroy(plane);
 	}
-	free(display->planes);
 	free(display);
 }
 
@@ -183,14 +184,12 @@ static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 	struct hwc_display *display;
 	int cursor;
 	struct hwc_plane *plane;
-	size_t i;
 	int ret;
 
 	display = layer->output->display;
 	cursor = drmModeAtomicGetCursor(req);
 
-	for (i = 0; i < display->planes_len; i++) {
-		plane = &display->planes[i];
+	hwc_list_for_each(plane, &display->planes, link) {
 		if (plane->layer != NULL) {
 			continue;
 		}
@@ -223,15 +222,13 @@ static bool layer_choose_plane(struct hwc_layer *layer, drmModeAtomicReq *req)
 
 bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 {
-	size_t i;
 	struct hwc_output *output;
 	struct hwc_layer *layer;
 	struct hwc_plane *plane;
 
 	/* Unset all existing plane and layer mappings.
 	   TODO: incremental updates keeping old configuration if possible */
-	for (i = 0; i < display->planes_len; i++) {
-		plane = &display->planes[i];
+	hwc_list_for_each(plane, &display->planes, link) {
 		if (plane->layer != NULL) {
 			plane->layer->plane = NULL;
 			plane->layer = NULL;
@@ -240,8 +237,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 
 	/* Disable all planes. Do it before building mappings to make sure not
 	   to hit bandwidth limits because too many planes are enabled. */
-	for (i = 0; i < display->planes_len; i++) {
-		plane = &display->planes[i];
+	hwc_list_for_each(plane, &display->planes, link) {
 		if (plane->layer == NULL) {
 			fprintf(stderr, "Disabling plane %d\n", plane->id);
 			if (!plane_apply(plane, NULL, req)) {

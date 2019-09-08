@@ -7,9 +7,7 @@
 struct hwc_display {
 	int drm_fd;
 
-	struct hwc_plane *planes;
-	size_t planes_len;
-
+	struct hwc_list planes; /* hwc_plane.link */
 	struct hwc_list outputs; /* hwc_output.link */
 };
 
@@ -40,6 +38,7 @@ struct hwc_plane {
 	uint32_t id;
 	uint32_t possible_crtcs;
 	/* TODO: formats */
+	struct hwc_list link; /* hwc_display.planes */
 
 	struct hwc_plane_property *props;
 	size_t props_len;
