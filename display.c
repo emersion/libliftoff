@@ -70,6 +70,7 @@ static void plane_destroy(struct hwc_plane *plane)
 struct hwc_display *hwc_display_create(int drm_fd)
 {
 	struct hwc_display *display;
+	drmModeRes *drm_res;
 	drmModePlaneRes *drm_plane_res;
 	uint32_t i;
 
@@ -85,6 +86,24 @@ struct hwc_display *hwc_display_create(int drm_fd)
 
 	hwc_list_init(&display->planes);
 	hwc_list_init(&display->outputs);
+
+	drm_res = drmModeGetResources(drm_fd);
+	if (drm_res == NULL) {
+		hwc_display_destroy(display);
+		return NULL;
+	}
+
+	display->crtcs = malloc(drm_res->count_crtcs * sizeof(uint32_t));
+	if (display->crtcs == NULL) {
+		drmModeFreeResources(drm_res);
+		hwc_display_destroy(display);
+		return NULL;
+	}
+	display->crtcs_len = drm_res->count_crtcs;
+	memcpy(display->crtcs, drm_res->crtcs,
+	       drm_res->count_crtcs * sizeof(uint32_t));
+
+	drmModeFreeResources(drm_res);
 
 	/* TODO: allow users to choose which layers to hand over */
 	drm_plane_res = drmModeGetPlaneResources(drm_fd);
@@ -112,6 +131,7 @@ void hwc_display_destroy(struct hwc_display *display)
 	hwc_list_for_each_safe(plane, tmp, &display->planes, link) {
 		plane_destroy(plane);
 	}
+	free(display->crtcs);
 	free(display);
 }
 
@@ -220,6 +240,9 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 	cursor = drmModeAtomicGetCursor(alloc->req);
 
 	if (plane->layer != NULL) {
+		goto skip;
+	}
+	if ((plane->possible_crtcs & (1 << output->crtc_index)) == 0) {
 		goto skip;
 	}
 

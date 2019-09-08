@@ -9,11 +9,15 @@ struct hwc_display {
 
 	struct hwc_list planes; /* hwc_plane.link */
 	struct hwc_list outputs; /* hwc_output.link */
+
+	uint32_t *crtcs;
+	size_t crtcs_len;
 };
 
 struct hwc_output {
 	struct hwc_display *display;
 	uint32_t crtc_id;
+	size_t crtc_index;
 	struct hwc_list link; /* hwc_display.outputs */
 
 	struct hwc_list layers; /* hwc_layer.link */
