@@ -7,7 +7,33 @@
 #include <unistd.h>
 #include "private.h"
 
-static struct hwc_plane *plane_create(struct hwc_display *display, int32_t id)
+static int guess_plane_zpos_from_type(struct hwc_display *display,
+				      uint32_t plane_id, int type)
+{
+	struct hwc_plane *primary;
+
+	/* From far to close to the eye: primary, overlay, cursor. Unless
+	 * the overlay ID < primary ID. */
+	switch (type) {
+	case DRM_PLANE_TYPE_PRIMARY:
+		return 0;
+	case DRM_PLANE_TYPE_CURSOR:
+		return 2;
+	case DRM_PLANE_TYPE_OVERLAY:
+		if (hwc_list_empty(&display->planes)) {
+			return 0; /* No primary plane, shouldn't happen */
+		}
+		primary = hwc_container_of(display->planes.next, primary, link);
+		if (plane_id < primary->id) {
+			return -1;
+		} else {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
 {
 	struct hwc_plane *plane;
 	drmModePlane *drm_plane;
@@ -15,6 +41,7 @@ static struct hwc_plane *plane_create(struct hwc_display *display, int32_t id)
 	uint32_t i;
 	drmModePropertyRes *drm_prop;
 	struct hwc_plane_property *prop;
+	int type = -1;
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
@@ -52,8 +79,17 @@ static struct hwc_plane *plane_create(struct hwc_display *display, int32_t id)
 		prop->id = drm_prop->prop_id;
 		drmModeFreeProperty(drm_prop);
 		plane->props_len++;
+
+		if (strcmp(prop->name, "type") == 0) {
+			type = drm_props->prop_values[i];
+		}
 	}
 	drmModeFreeObjectProperties(drm_props);
+
+	if (type >= 0) {
+		plane->zpos = guess_plane_zpos_from_type(display, plane->id,
+							 type);
+	}
 
 	hwc_list_insert(display->planes.prev, &plane->link);
 

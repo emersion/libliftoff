@@ -41,6 +41,7 @@ struct hwc_layer_property {
 struct hwc_plane {
 	uint32_t id;
 	uint32_t possible_crtcs;
+	int zpos; /* greater values mean closer to the eye */
 	/* TODO: formats */
 	struct hwc_list link; /* hwc_display.planes */
 
