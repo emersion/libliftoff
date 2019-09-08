@@ -325,6 +325,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 		 * before any other plane. */
 
 		alloc.best_score = 0;
+		memset(alloc.best, 0, alloc.planes_len * sizeof(*alloc.best));
 		if (!output_choose_layers(output, &alloc, display->planes.next,
 					  0, 0)) {
 			return false;
