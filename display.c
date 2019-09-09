@@ -41,7 +41,8 @@ static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
 	uint32_t i;
 	drmModePropertyRes *drm_prop;
 	struct hwc_plane_property *prop;
-	int type = -1;
+	uint64_t value;
+	bool has_zpos = false;
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
@@ -80,16 +81,17 @@ static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
 		drmModeFreeProperty(drm_prop);
 		plane->props_len++;
 
-		if (strcmp(prop->name, "type") == 0) {
-			type = drm_props->prop_values[i];
+		value = drm_props->prop_values[i];
+		if (strcmp(prop->name, "type") == 0 && !has_zpos) {
+			plane->zpos = guess_plane_zpos_from_type(display,
+								 plane->id,
+								 type);
+		} else if (strcmp(prop->name, "zpos") == 0) {
+			plane->zpos = zpos;
+			has_zpos = true;
 		}
 	}
 	drmModeFreeObjectProperties(drm_props);
-
-	if (type >= 0) {
-		plane->zpos = guess_plane_zpos_from_type(display, plane->id,
-							 type);
-	}
 
 	hwc_list_insert(display->planes.prev, &plane->link);
 
