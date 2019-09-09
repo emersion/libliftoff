@@ -8,7 +8,7 @@
 #include "private.h"
 
 static int guess_plane_zpos_from_type(struct hwc_display *display,
-				      uint32_t plane_id, int type)
+				      uint32_t plane_id, uint32_t type)
 {
 	struct hwc_plane *primary;
 
@@ -35,14 +35,14 @@ static int guess_plane_zpos_from_type(struct hwc_display *display,
 
 static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
 {
-	struct hwc_plane *plane;
+	struct hwc_plane *plane, *cur;
 	drmModePlane *drm_plane;
 	drmModeObjectProperties *drm_props;
 	uint32_t i;
 	drmModePropertyRes *drm_prop;
 	struct hwc_plane_property *prop;
 	uint64_t value;
-	bool has_zpos = false;
+	bool has_type = false, has_zpos = false;
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
@@ -82,18 +82,45 @@ static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
 		plane->props_len++;
 
 		value = drm_props->prop_values[i];
-		if (strcmp(prop->name, "type") == 0 && !has_zpos) {
-			plane->zpos = guess_plane_zpos_from_type(display,
-								 plane->id,
-								 type);
+		if (strcmp(prop->name, "type") == 0) {
+			plane->type = value;
+			has_type = true;
 		} else if (strcmp(prop->name, "zpos") == 0) {
-			plane->zpos = zpos;
+			plane->zpos = value;
 			has_zpos = true;
 		}
 	}
 	drmModeFreeObjectProperties(drm_props);
 
-	hwc_list_insert(display->planes.prev, &plane->link);
+	if (!has_type) {
+		fprintf(stderr, "plane %d is missing the 'type' property\n",
+			plane->id);
+		free(plane);
+		return NULL;
+	} else if (!has_zpos) {
+		plane->zpos = guess_plane_zpos_from_type(display, plane->id,
+							 plane->type);
+	}
+
+	/* During plane allocation, we will use the plane list order to fill
+	 * planes with FBs. Primary planes need to be filled first, then planes
+	 * far from the primary planes, then planes closer and closer to the
+	 * primary plane. */
+	if (plane->type == DRM_PLANE_TYPE_PRIMARY) {
+		hwc_list_insert(&display->planes, &plane->link);
+	} else {
+		hwc_list_for_each(cur, &display->planes, link) {
+			if (cur->type != DRM_PLANE_TYPE_PRIMARY &&
+			    plane->zpos >= cur->zpos) {
+				hwc_list_insert(cur->link.prev, &plane->link);
+				break;
+			}
+		}
+
+		if (plane->link.next == NULL) { /* not inserted */
+			hwc_list_insert(display->planes.prev, &plane->link);
+		}
+	}
 
 	return plane;
 }
