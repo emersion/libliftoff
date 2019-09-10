@@ -229,20 +229,30 @@ static bool plane_set_prop(struct hwc_plane *plane, drmModeAtomicReq *req,
 }
 
 static bool plane_apply(struct hwc_plane *plane, struct hwc_layer *layer,
-			drmModeAtomicReq *req)
+			drmModeAtomicReq *req, bool *compatible)
 {
+	int cursor;
 	size_t i;
 	struct hwc_layer_property *layer_prop;
 	struct hwc_plane_property *plane_prop;
 
+	*compatible = true;
+	cursor = drmModeAtomicGetCursor(req);
+
 	if (layer == NULL) {
 		plane_prop = plane_get_property(plane, "FB_ID");
-		assert(plane_prop);
+		if (plane_prop == NULL) {
+			fprintf(stderr, "plane is missing the FB_ID property\n");
+			return false;
+		}
 		return plane_set_prop(plane, req, plane_prop, 0);
 	}
 
 	plane_prop = plane_get_property(plane, "CRTC_ID");
-	assert(plane_prop);
+	if (plane_prop == NULL) {
+		fprintf(stderr, "plane is missing the CRTC_ID property\n");
+		return false;
+	}
 	if (!plane_set_prop(plane, req, plane_prop, layer->output->crtc_id)) {
 		return false;
 	}
@@ -251,12 +261,13 @@ static bool plane_apply(struct hwc_plane *plane, struct hwc_layer *layer,
 		layer_prop = &layer->props[i];
 		plane_prop = plane_get_property(plane, layer_prop->name);
 		if (plane_prop == NULL) {
-			fprintf(stderr, "failed to find property %s\n",
-				layer_prop->name);
-			return false;
+			*compatible = false;
+			drmModeAtomicSetCursor(req, cursor);
+			return true;
 		}
 
 		if (!plane_set_prop(plane, req, plane_prop, layer_prop->value)) {
+			drmModeAtomicSetCursor(req, cursor);
 			return false;
 		}
 	}
@@ -280,7 +291,7 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 	struct hwc_layer *layer;
 	int cursor, ret;
 	size_t remaining_planes, i;
-	bool found;
+	bool found, compatible;
 
 	display = output->display;
 
@@ -331,8 +342,11 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 		alloc->current[plane_idx] = layer;
 		fprintf(stderr, "Trying to apply layer %p with plane %d...\n",
 			(void *)layer, plane->id);
-		if (!plane_apply(plane, layer, alloc->req)) {
+		if (!plane_apply(plane, layer, alloc->req, &compatible)) {
 			return false;
+		}
+		if (!compatible) {
+			continue;
 		}
 
 		ret = drmModeAtomicCommit(display->drm_fd, alloc->req,
@@ -371,6 +385,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 	struct hwc_layer *layer;
 	struct plane_alloc alloc;
 	size_t i;
+	bool compatible;
 
 	/* Unset all existing plane and layer mappings.
 	   TODO: incremental updates keeping old configuration if possible */
@@ -386,9 +401,10 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 	hwc_list_for_each(plane, &display->planes, link) {
 		if (plane->layer == NULL) {
 			fprintf(stderr, "Disabling plane %d\n", plane->id);
-			if (!plane_apply(plane, NULL, req)) {
+			if (!plane_apply(plane, NULL, req, &compatible)) {
 				return false;
 			}
+			assert(compatible);
 		}
 	}
 
@@ -433,9 +449,10 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 
 			fprintf(stderr, "Assigning layer %p to plane %d\n",
 				(void *)layer, plane->id);
-			if (!plane_apply(plane, layer, req)) {
+			if (!plane_apply(plane, layer, req, &compatible)) {
 				return false;
 			}
+			assert(compatible);
 
 			assert(plane->layer == NULL);
 			assert(layer->plane == NULL);
