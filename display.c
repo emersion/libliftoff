@@ -275,16 +275,26 @@ static bool plane_apply(struct hwc_plane *plane, struct hwc_layer *layer,
 	return true;
 }
 
+/* Global data for the allocation algorithm */
 struct plane_alloc {
 	drmModeAtomicReq *req;
 	size_t planes_len;
-	struct hwc_layer **current;
+
 	struct hwc_layer **best;
 	int best_score;
 };
 
+/* Transient data, arguments for each step */
+struct plane_data {
+	struct hwc_list *plane_link; /* hwc_plane.link */
+	size_t plane_idx;
+
+	struct hwc_layer **alloc; /* only items up to plane_idx are valid */
+	int score;
+};
+
 bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
-			  struct hwc_list *cur, size_t plane_idx, int score)
+			  struct plane_data *data)
 {
 	struct hwc_display *display;
 	struct hwc_plane *plane;
@@ -292,21 +302,26 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 	int cursor, ret;
 	size_t remaining_planes, i;
 	bool found, compatible;
+	struct plane_data next_data;
 
 	display = output->display;
 
-	if (cur == &display->planes) { /* Allocation finished */
-		if (score > alloc->best_score) {
+	if (data->plane_link == &display->planes) { /* Allocation finished */
+		if (data->score > alloc->best_score) {
 			/* We found a better allocation */
-			alloc->best_score = score;
-			memcpy(alloc->best, alloc->current,
+			alloc->best_score = data->score;
+			memcpy(alloc->best, data->alloc,
 			       alloc->planes_len * sizeof(struct hwc_layer *));
 		}
 		return true;
 	}
-	plane = hwc_container_of(cur, plane, link);
+	plane = hwc_container_of(data->plane_link, plane, link);
 
-	remaining_planes = alloc->planes_len - plane_idx;
+	next_data.plane_link = data->plane_link->next;
+	next_data.plane_idx = data->plane_idx + 1;
+	next_data.alloc = data->alloc;
+
+	remaining_planes = alloc->planes_len - data->plane_idx;
 	if (alloc->best_score >= (int)remaining_planes) {
 		/* Even if we find a layer for all remaining planes, we won't
 		 * find a better allocation. Give up. */
@@ -328,8 +343,8 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 		}
 
 		found = false;
-		for (i = 0; i < plane_idx; i++) {
-			if (alloc->current[i] == layer) {
+		for (i = 0; i < data->plane_idx; i++) {
+			if (data->alloc[i] == layer) {
 				found = true;
 				break;
 			}
@@ -339,7 +354,7 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 		}
 
 		/* Try to use this layer for the current plane */
-		alloc->current[plane_idx] = layer;
+		data->alloc[data->plane_idx] = layer;
 		fprintf(stderr, "Trying to apply layer %p with plane %d...\n",
 			(void *)layer, plane->id);
 		if (!plane_apply(plane, layer, alloc->req, &compatible)) {
@@ -354,8 +369,8 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 		if (ret == 0) {
 			fprintf(stderr, "Success\n");
 			/* Continue with the next plane */
-			if (!output_choose_layers(output, alloc, cur->next,
-						  plane_idx + 1, score + 1)) {
+			next_data.score = data->score + 1;
+			if (!output_choose_layers(output, alloc, &next_data)) {
 				return false;
 			}
 		} else if (-ret != EINVAL && -ret != ERANGE) {
@@ -368,9 +383,9 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 
 skip:
 	/* Try not to use the current plane */
-	alloc->current[plane_idx] = NULL;
-	if (!output_choose_layers(output, alloc, cur->next,
-				  plane_idx + 1, score)) {
+	data->alloc[data->plane_idx] = NULL;
+	next_data.score = data->score;
+	if (!output_choose_layers(output, alloc, &next_data)) {
 		return false;
 	}
 	drmModeAtomicSetCursor(alloc->req, cursor);
@@ -384,6 +399,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 	struct hwc_plane *plane;
 	struct hwc_layer *layer;
 	struct plane_alloc alloc;
+	struct plane_data data;
 	size_t i;
 	bool compatible;
 
@@ -410,9 +426,10 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 
 	alloc.req = req;
 	alloc.planes_len = hwc_list_length(&display->planes);
-	alloc.current = malloc(alloc.planes_len * sizeof(*alloc.current));
+
+	data.alloc = malloc(alloc.planes_len * sizeof(*data.alloc));
 	alloc.best = malloc(alloc.planes_len * sizeof(*alloc.best));
-	if (alloc.current == NULL || alloc.best == NULL) {
+	if (data.alloc == NULL || alloc.best == NULL) {
 		perror("malloc");
 		return false;
 	}
@@ -430,8 +447,10 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 
 		alloc.best_score = 0;
 		memset(alloc.best, 0, alloc.planes_len * sizeof(*alloc.best));
-		if (!output_choose_layers(output, &alloc, display->planes.next,
-					  0, 0)) {
+		data.plane_link = display->planes.next;
+		data.plane_idx = 0;
+		data.score = 0;
+		if (!output_choose_layers(output, &alloc, &data)) {
 			return false;
 		}
 
@@ -461,7 +480,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 		}
 	}
 
-	free(alloc.current);
+	free(data.alloc);
 	free(alloc.best);
 
 	return true;
