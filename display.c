@@ -146,14 +146,15 @@ struct liftoff_display *liftoff_display_create(int drm_fd)
 	if (display == NULL) {
 		return NULL;
 	}
+
+	liftoff_list_init(&display->planes);
+	liftoff_list_init(&display->outputs);
+
 	display->drm_fd = dup(drm_fd);
 	if (display->drm_fd < 0) {
 		liftoff_display_destroy(display);
 		return NULL;
 	}
-
-	liftoff_list_init(&display->planes);
-	liftoff_list_init(&display->outputs);
 
 	drm_res = drmModeGetResources(drm_fd);
 	if (drm_res == NULL) {
