@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -259,6 +260,12 @@ static bool plane_apply(struct hwc_plane *plane, struct hwc_layer *layer,
 
 	for (i = 0; i < layer->props_len; i++) {
 		layer_prop = &layer->props[i];
+		if (strcmp(layer_prop->name, "zpos") == 0) {
+			/* We don't yet support setting the zpos property. We
+			 * only use it (read-only) during plane allocation. */
+			continue;
+		}
+
 		plane_prop = plane_get_property(plane, layer_prop->name);
 		if (plane_prop == NULL) {
 			*compatible = false;
@@ -291,6 +298,7 @@ struct plane_data {
 
 	struct hwc_layer **alloc; /* only items up to plane_idx are valid */
 	int score;
+	int last_plane_zpos, last_layer_zpos;
 };
 
 bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
@@ -303,6 +311,7 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 	size_t remaining_planes, i;
 	bool found, compatible;
 	struct plane_data next_data;
+	struct hwc_layer_property *zpos_prop;
 
 	display = output->display;
 
@@ -317,6 +326,7 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 	}
 	plane = hwc_container_of(data->plane_link, plane, link);
 
+	/* These don't change depending on the layer we choose */
 	next_data.plane_link = data->plane_link->next;
 	next_data.plane_idx = data->plane_idx + 1;
 	next_data.alloc = data->alloc;
@@ -337,11 +347,15 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 		goto skip;
 	}
 
+	fprintf(stderr, "Performing allocation for plane %d (%zu/%zu)\n",
+		plane->id, data->plane_idx + 1, alloc->planes_len);
+
 	hwc_list_for_each(layer, &output->layers, link) {
 		if (layer->plane != NULL) {
 			continue;
 		}
 
+		/* Skip this layer if already allocated */
 		found = false;
 		for (i = 0; i < data->plane_idx; i++) {
 			if (data->alloc[i] == layer) {
@@ -353,23 +367,61 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 			continue;
 		}
 
+		zpos_prop = layer_get_property(layer, "zpos");
+		if (zpos_prop != NULL) {
+			if ((int)zpos_prop->value > data->last_layer_zpos) {
+				/* This layer needs to be on top of the last
+				 * allocated one */
+				/* TODO: don't skip if they don't intersect? */
+				fprintf(stderr, "Layer %p -> plane %d: "
+					"layer zpos invalid\n",
+					(void *)layer, plane->id);
+				continue;
+			}
+			if ((int)zpos_prop->value < data->last_layer_zpos &&
+			    plane->zpos >= data->last_plane_zpos) {
+				/* This layer needs to be under the last
+				 * allocated one, but this plane isn't under the
+				 * last one. This  */
+				/* TODO: don't skip if they don't intersect? */
+				fprintf(stderr, "Layer %p -> plane %d: "
+					"plane zpos invalid\n",
+					(void *)layer, plane->id);
+				continue;
+			}
+		}
+
 		/* Try to use this layer for the current plane */
-		data->alloc[data->plane_idx] = layer;
-		fprintf(stderr, "Trying to apply layer %p with plane %d...\n",
+		fprintf(stderr, "Layer %p -> plane %d: applying properties...\n",
 			(void *)layer, plane->id);
+		data->alloc[data->plane_idx] = layer;
 		if (!plane_apply(plane, layer, alloc->req, &compatible)) {
 			return false;
 		}
 		if (!compatible) {
+			fprintf(stderr, "Layer %p -> plane %d: incompatible "
+				"properties\n", (void *)layer, plane->id);
 			continue;
 		}
 
 		ret = drmModeAtomicCommit(display->drm_fd, alloc->req,
 					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
 		if (ret == 0) {
-			fprintf(stderr, "Success\n");
+			fprintf(stderr, "Layer %p -> plane %d: success\n",
+				(void *)layer, plane->id);
 			/* Continue with the next plane */
 			next_data.score = data->score + 1;
+			if (plane->type != DRM_PLANE_TYPE_PRIMARY) {
+				next_data.last_plane_zpos = plane->zpos;
+			} else {
+				next_data.last_plane_zpos = data->last_plane_zpos;
+			}
+			if (zpos_prop != NULL &&
+			    plane->type != DRM_PLANE_TYPE_PRIMARY) {
+				next_data.last_layer_zpos = zpos_prop->value;
+			} else {
+				next_data.last_layer_zpos = data->last_layer_zpos;
+			}
 			if (!output_choose_layers(output, alloc, &next_data)) {
 				return false;
 			}
@@ -385,6 +437,8 @@ skip:
 	/* Try not to use the current plane */
 	data->alloc[data->plane_idx] = NULL;
 	next_data.score = data->score;
+	next_data.last_layer_zpos = data->last_layer_zpos;
+	next_data.last_plane_zpos = data->last_plane_zpos;
 	if (!output_choose_layers(output, alloc, &next_data)) {
 		return false;
 	}
@@ -450,6 +504,8 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 		data.plane_link = display->planes.next;
 		data.plane_idx = 0;
 		data.score = 0;
+		data.last_layer_zpos = INT_MAX;
+		data.last_plane_zpos = INT_MAX;
 		if (!output_choose_layers(output, &alloc, &data)) {
 			return false;
 		}

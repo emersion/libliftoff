@@ -57,4 +57,7 @@ struct hwc_plane_property {
 	uint32_t id;
 };
 
+struct hwc_layer_property *layer_get_property(struct hwc_layer *layer,
+					      const char *name);
+
 #endif

@@ -89,8 +89,13 @@ static uint32_t create_argb_fb(int drm_fd, uint32_t width, uint32_t height,
 	return fb_id;
 }
 
-/* ARGB */
-static const uint32_t colors[] = {0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFFFFFF00};
+/* ARGB 8:8:8:8 */
+static const uint32_t colors[] = {
+	0xFFFF0000, /* red */
+	0xFF00FF00, /* green */
+	0xFF0000FF, /* blue */
+	0xFFFFFF00, /* yellow */
+};
 
 static struct hwc_layer *add_layer(int drm_fd, struct hwc_output *output,
 				   int x, int y, int width, int height,
@@ -178,8 +183,13 @@ int main(int argc, char *argv[])
 	layers[0] = add_layer(drm_fd, output, 0, 0, crtc->mode.hdisplay,
 			      crtc->mode.vdisplay, false);
 	layers[1] = add_layer(drm_fd, output, 50, 50, 256, 256, true);
-	layers[2] = add_layer(drm_fd, output, 500, 500, 128, 128, false);
-	layers[3] = add_layer(drm_fd, output, 700, 700, 128, 128, true);
+	layers[2] = add_layer(drm_fd, output, 300, 300, 128, 128, false);
+	layers[3] = add_layer(drm_fd, output, 400, 400, 128, 128, true);
+
+	hwc_layer_set_property(layers[0], "zpos", 0);
+	hwc_layer_set_property(layers[1], "zpos", 1);
+	hwc_layer_set_property(layers[2], "zpos", 2);
+	hwc_layer_set_property(layers[3], "zpos", 3);
 
 	req = drmModeAtomicAlloc();
 	if (!hwc_display_apply(display, req)) {
