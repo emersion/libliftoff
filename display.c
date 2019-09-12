@@ -322,7 +322,7 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 	next_data.alloc = data->alloc;
 
 	remaining_planes = alloc->planes_len - data->plane_idx;
-	if (alloc->best_score >= (int)remaining_planes) {
+	if (alloc->best_score >= data->score + (int)remaining_planes) {
 		/* Even if we find a layer for all remaining planes, we won't
 		 * find a better allocation. Give up. */
 		return true;
