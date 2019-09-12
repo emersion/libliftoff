@@ -1,12 +1,12 @@
 #include "list.h"
 
-void hwc_list_init(struct hwc_list *list)
+void liftoff_list_init(struct liftoff_list *list)
 {
 	list->prev = list;
 	list->next = list;
 }
 
-void hwc_list_insert(struct hwc_list *list, struct hwc_list *elm)
+void liftoff_list_insert(struct liftoff_list *list, struct liftoff_list *elm)
 {
 	elm->prev = list;
 	elm->next = list->next;
@@ -14,7 +14,7 @@ void hwc_list_insert(struct hwc_list *list, struct hwc_list *elm)
 	elm->next->prev = elm;
 }
 
-void hwc_list_remove(struct hwc_list *elm)
+void liftoff_list_remove(struct liftoff_list *elm)
 {
 	elm->prev->next = elm->next;
 	elm->next->prev = elm->prev;
@@ -22,9 +22,9 @@ void hwc_list_remove(struct hwc_list *elm)
 	elm->prev = NULL;
 }
 
-size_t hwc_list_length(const struct hwc_list *list)
+size_t liftoff_list_length(const struct liftoff_list *list)
 {
-	struct hwc_list *e;
+	struct liftoff_list *e;
 	size_t count;
 
 	count = 0;
@@ -37,7 +37,7 @@ size_t hwc_list_length(const struct hwc_list *list)
 	return count;
 }
 
-bool hwc_list_empty(const struct hwc_list *list)
+bool liftoff_list_empty(const struct liftoff_list *list)
 {
 	return list->next == list;
 }

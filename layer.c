@@ -3,28 +3,28 @@
 #include <string.h>
 #include "private.h"
 
-struct hwc_layer *hwc_layer_create(struct hwc_output *output)
+struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output)
 {
-	struct hwc_layer *layer;
+	struct liftoff_layer *layer;
 
 	layer = calloc(1, sizeof(*layer));
 	if (layer == NULL) {
 		return NULL;
 	}
 	layer->output = output;
-	hwc_list_insert(output->layers.prev, &layer->link);
+	liftoff_list_insert(output->layers.prev, &layer->link);
 	return layer;
 }
 
-void hwc_layer_destroy(struct hwc_layer *layer)
+void liftoff_layer_destroy(struct liftoff_layer *layer)
 {
 	free(layer->props);
-	hwc_list_remove(&layer->link);
+	liftoff_list_remove(&layer->link);
 	free(layer);
 }
 
-struct hwc_layer_property *layer_get_property(struct hwc_layer *layer,
-					      const char *name)
+struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
+						  const char *name)
 {
 	size_t i;
 
@@ -36,11 +36,11 @@ struct hwc_layer_property *layer_get_property(struct hwc_layer *layer,
 	return NULL;
 }
 
-void hwc_layer_set_property(struct hwc_layer *layer, const char *name,
-			    uint64_t value)
+void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
+				uint64_t value)
 {
-	struct hwc_layer_property *props;
-	struct hwc_layer_property *prop;
+	struct liftoff_layer_property *props;
+	struct liftoff_layer_property *prop;
 
 	/* TODO: better error handling */
 	if (strcmp(name, "CRTC_ID") == 0) {
@@ -51,7 +51,7 @@ void hwc_layer_set_property(struct hwc_layer *layer, const char *name,
 	prop = layer_get_property(layer, name);
 	if (prop == NULL) {
 		props = realloc(layer->props, (layer->props_len + 1)
-				* sizeof(struct hwc_layer_property));
+				* sizeof(struct liftoff_layer_property));
 		if (props == NULL) {
 			perror("realloc");
 			return;
@@ -67,7 +67,7 @@ void hwc_layer_set_property(struct hwc_layer *layer, const char *name,
 	prop->value = value;
 }
 
-uint32_t hwc_layer_get_plane_id(struct hwc_layer *layer)
+uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer)
 {
 	if (layer->plane == NULL) {
 		return 0;

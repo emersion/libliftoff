@@ -3,10 +3,10 @@
 #include <sys/types.h>
 #include "private.h"
 
-struct hwc_output *hwc_output_create(struct hwc_display *display,
-				     uint32_t crtc_id)
+struct liftoff_output *liftoff_output_create(struct liftoff_display *display,
+					     uint32_t crtc_id)
 {
-	struct hwc_output *output;
+	struct liftoff_output *output;
 	ssize_t crtc_index;
 	size_t i;
 
@@ -28,13 +28,13 @@ struct hwc_output *hwc_output_create(struct hwc_display *display,
 	output->display = display;
 	output->crtc_id = crtc_id;
 	output->crtc_index = crtc_index;
-	hwc_list_init(&output->layers);
-	hwc_list_insert(&display->outputs, &output->link);
+	liftoff_list_init(&output->layers);
+	liftoff_list_insert(&display->outputs, &output->link);
 	return output;
 }
 
-void hwc_output_destroy(struct hwc_output *output)
+void liftoff_output_destroy(struct liftoff_output *output)
 {
-	hwc_list_remove(&output->link);
+	liftoff_list_remove(&output->link);
 	free(output);
 }

@@ -8,10 +8,10 @@
 #include <unistd.h>
 #include "private.h"
 
-static int guess_plane_zpos_from_type(struct hwc_display *display,
+static int guess_plane_zpos_from_type(struct liftoff_display *display,
 				      uint32_t plane_id, uint32_t type)
 {
-	struct hwc_plane *primary;
+	struct liftoff_plane *primary;
 
 	/* From far to close to the eye: primary, overlay, cursor. Unless
 	 * the overlay ID < primary ID. */
@@ -21,10 +21,11 @@ static int guess_plane_zpos_from_type(struct hwc_display *display,
 	case DRM_PLANE_TYPE_CURSOR:
 		return 2;
 	case DRM_PLANE_TYPE_OVERLAY:
-		if (hwc_list_empty(&display->planes)) {
+		if (liftoff_list_empty(&display->planes)) {
 			return 0; /* No primary plane, shouldn't happen */
 		}
-		primary = hwc_container_of(display->planes.next, primary, link);
+		primary = liftoff_container_of(display->planes.next,
+					       primary, link);
 		if (plane_id < primary->id) {
 			return -1;
 		} else {
@@ -34,14 +35,15 @@ static int guess_plane_zpos_from_type(struct hwc_display *display,
 	return 0;
 }
 
-static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
+static struct liftoff_plane *plane_create(struct liftoff_display *display,
+					  uint32_t id)
 {
-	struct hwc_plane *plane, *cur;
+	struct liftoff_plane *plane, *cur;
 	drmModePlane *drm_plane;
 	drmModeObjectProperties *drm_props;
 	uint32_t i;
 	drmModePropertyRes *drm_prop;
-	struct hwc_plane_property *prop;
+	struct liftoff_plane_property *prop;
 	uint64_t value;
 	bool has_type = false, has_zpos = false;
 
@@ -64,7 +66,7 @@ static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
 		return NULL;
 	}
 	plane->props = calloc(drm_props->count_props,
-			      sizeof(struct hwc_plane_property));
+			      sizeof(struct liftoff_plane_property));
 	if (plane->props == NULL) {
 		drmModeFreeObjectProperties(drm_props);
 		return NULL;
@@ -108,34 +110,34 @@ static struct hwc_plane *plane_create(struct hwc_display *display, uint32_t id)
 	 * far from the primary planes, then planes closer and closer to the
 	 * primary plane. */
 	if (plane->type == DRM_PLANE_TYPE_PRIMARY) {
-		hwc_list_insert(&display->planes, &plane->link);
+		liftoff_list_insert(&display->planes, &plane->link);
 	} else {
-		hwc_list_for_each(cur, &display->planes, link) {
+		liftoff_list_for_each(cur, &display->planes, link) {
 			if (cur->type != DRM_PLANE_TYPE_PRIMARY &&
 			    plane->zpos >= cur->zpos) {
-				hwc_list_insert(cur->link.prev, &plane->link);
+				liftoff_list_insert(cur->link.prev, &plane->link);
 				break;
 			}
 		}
 
 		if (plane->link.next == NULL) { /* not inserted */
-			hwc_list_insert(display->planes.prev, &plane->link);
+			liftoff_list_insert(display->planes.prev, &plane->link);
 		}
 	}
 
 	return plane;
 }
 
-static void plane_destroy(struct hwc_plane *plane)
+static void plane_destroy(struct liftoff_plane *plane)
 {
-	hwc_list_remove(&plane->link);
+	liftoff_list_remove(&plane->link);
 	free(plane->props);
 	free(plane);
 }
 
-struct hwc_display *hwc_display_create(int drm_fd)
+struct liftoff_display *liftoff_display_create(int drm_fd)
 {
-	struct hwc_display *display;
+	struct liftoff_display *display;
 	drmModeRes *drm_res;
 	drmModePlaneRes *drm_plane_res;
 	uint32_t i;
@@ -146,23 +148,23 @@ struct hwc_display *hwc_display_create(int drm_fd)
 	}
 	display->drm_fd = dup(drm_fd);
 	if (display->drm_fd < 0) {
-		hwc_display_destroy(display);
+		liftoff_display_destroy(display);
 		return NULL;
 	}
 
-	hwc_list_init(&display->planes);
-	hwc_list_init(&display->outputs);
+	liftoff_list_init(&display->planes);
+	liftoff_list_init(&display->outputs);
 
 	drm_res = drmModeGetResources(drm_fd);
 	if (drm_res == NULL) {
-		hwc_display_destroy(display);
+		liftoff_display_destroy(display);
 		return NULL;
 	}
 
 	display->crtcs = malloc(drm_res->count_crtcs * sizeof(uint32_t));
 	if (display->crtcs == NULL) {
 		drmModeFreeResources(drm_res);
-		hwc_display_destroy(display);
+		liftoff_display_destroy(display);
 		return NULL;
 	}
 	display->crtcs_len = drm_res->count_crtcs;
@@ -174,13 +176,13 @@ struct hwc_display *hwc_display_create(int drm_fd)
 	/* TODO: allow users to choose which layers to hand over */
 	drm_plane_res = drmModeGetPlaneResources(drm_fd);
 	if (drm_plane_res == NULL) {
-		hwc_display_destroy(display);
+		liftoff_display_destroy(display);
 		return NULL;
 	}
 
 	for (i = 0; i < drm_plane_res->count_planes; i++) {
 		if (plane_create(display, drm_plane_res->planes[i]) == NULL) {
-			hwc_display_destroy(display);
+			liftoff_display_destroy(display);
 			return NULL;
 		}
 	}
@@ -189,20 +191,20 @@ struct hwc_display *hwc_display_create(int drm_fd)
 	return display;
 }
 
-void hwc_display_destroy(struct hwc_display *display)
+void liftoff_display_destroy(struct liftoff_display *display)
 {
-	struct hwc_plane *plane, *tmp;
+	struct liftoff_plane *plane, *tmp;
 
 	close(display->drm_fd);
-	hwc_list_for_each_safe(plane, tmp, &display->planes, link) {
+	liftoff_list_for_each_safe(plane, tmp, &display->planes, link) {
 		plane_destroy(plane);
 	}
 	free(display->crtcs);
 	free(display);
 }
 
-static struct hwc_plane_property *plane_get_property(struct hwc_plane *plane,
-						     const char *name)
+static struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
+							 const char *name)
 {
 	size_t i;
 
@@ -214,8 +216,8 @@ static struct hwc_plane_property *plane_get_property(struct hwc_plane *plane,
 	return NULL;
 }
 
-static bool plane_set_prop(struct hwc_plane *plane, drmModeAtomicReq *req,
-			   struct hwc_plane_property *prop, uint64_t value)
+static bool plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
+			   struct liftoff_plane_property *prop, uint64_t value)
 {
 	int ret;
 
@@ -229,13 +231,13 @@ static bool plane_set_prop(struct hwc_plane *plane, drmModeAtomicReq *req,
 	return true;
 }
 
-static bool plane_apply(struct hwc_plane *plane, struct hwc_layer *layer,
+static bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 			drmModeAtomicReq *req, bool *compatible)
 {
 	int cursor;
 	size_t i;
-	struct hwc_layer_property *layer_prop;
-	struct hwc_plane_property *plane_prop;
+	struct liftoff_layer_property *layer_prop;
+	struct liftoff_plane_property *plane_prop;
 
 	*compatible = true;
 	cursor = drmModeAtomicGetCursor(req);
@@ -287,31 +289,31 @@ struct plane_alloc {
 	drmModeAtomicReq *req;
 	size_t planes_len;
 
-	struct hwc_layer **best;
+	struct liftoff_layer **best;
 	int best_score;
 };
 
 /* Transient data, arguments for each step */
 struct plane_data {
-	struct hwc_list *plane_link; /* hwc_plane.link */
+	struct liftoff_list *plane_link; /* liftoff_plane.link */
 	size_t plane_idx;
 
-	struct hwc_layer **alloc; /* only items up to plane_idx are valid */
+	struct liftoff_layer **alloc; /* only items up to plane_idx are valid */
 	int score;
 	int last_plane_zpos, last_layer_zpos;
 };
 
-bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
+bool output_choose_layers(struct liftoff_output *output, struct plane_alloc *alloc,
 			  struct plane_data *data)
 {
-	struct hwc_display *display;
-	struct hwc_plane *plane;
-	struct hwc_layer *layer;
+	struct liftoff_display *display;
+	struct liftoff_plane *plane;
+	struct liftoff_layer *layer;
 	int cursor, ret;
 	size_t remaining_planes, i;
 	bool found, compatible;
 	struct plane_data next_data;
-	struct hwc_layer_property *zpos_prop;
+	struct liftoff_layer_property *zpos_prop;
 
 	display = output->display;
 
@@ -320,11 +322,11 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 			/* We found a better allocation */
 			alloc->best_score = data->score;
 			memcpy(alloc->best, data->alloc,
-			       alloc->planes_len * sizeof(struct hwc_layer *));
+			       alloc->planes_len * sizeof(struct liftoff_layer *));
 		}
 		return true;
 	}
-	plane = hwc_container_of(data->plane_link, plane, link);
+	plane = liftoff_container_of(data->plane_link, plane, link);
 
 	/* These don't change depending on the layer we choose */
 	next_data.plane_link = data->plane_link->next;
@@ -350,7 +352,7 @@ bool output_choose_layers(struct hwc_output *output, struct plane_alloc *alloc,
 	fprintf(stderr, "Performing allocation for plane %d (%zu/%zu)\n",
 		plane->id, data->plane_idx + 1, alloc->planes_len);
 
-	hwc_list_for_each(layer, &output->layers, link) {
+	liftoff_list_for_each(layer, &output->layers, link) {
 		if (layer->plane != NULL) {
 			continue;
 		}
@@ -447,11 +449,11 @@ skip:
 	return true;
 }
 
-bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
+bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *req)
 {
-	struct hwc_output *output;
-	struct hwc_plane *plane;
-	struct hwc_layer *layer;
+	struct liftoff_output *output;
+	struct liftoff_plane *plane;
+	struct liftoff_layer *layer;
 	struct plane_alloc alloc;
 	struct plane_data data;
 	size_t i;
@@ -459,7 +461,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 
 	/* Unset all existing plane and layer mappings.
 	   TODO: incremental updates keeping old configuration if possible */
-	hwc_list_for_each(plane, &display->planes, link) {
+	liftoff_list_for_each(plane, &display->planes, link) {
 		if (plane->layer != NULL) {
 			plane->layer->plane = NULL;
 			plane->layer = NULL;
@@ -468,7 +470,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 
 	/* Disable all planes. Do it before building mappings to make sure not
 	   to hit bandwidth limits because too many planes are enabled. */
-	hwc_list_for_each(plane, &display->planes, link) {
+	liftoff_list_for_each(plane, &display->planes, link) {
 		if (plane->layer == NULL) {
 			fprintf(stderr, "Disabling plane %d\n", plane->id);
 			if (!plane_apply(plane, NULL, req, &compatible)) {
@@ -479,7 +481,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 	}
 
 	alloc.req = req;
-	alloc.planes_len = hwc_list_length(&display->planes);
+	alloc.planes_len = liftoff_list_length(&display->planes);
 
 	data.alloc = malloc(alloc.planes_len * sizeof(*data.alloc));
 	alloc.best = malloc(alloc.planes_len * sizeof(*alloc.best));
@@ -493,7 +495,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 	 * issues? Also: be fair when mapping planes to outputs, don't give all
 	 * planes to a single output. Also: don't treat each output separately,
 	 * allocate planes for all outputs at once. */
-	hwc_list_for_each(output, &display->outputs, link) {
+	liftoff_list_for_each(output, &display->outputs, link) {
 		/* For each plane, try to find a layer. Don't do it the other
 		 * way around (ie. for each layer, try to find a plane) because
 		 * some drivers want user-space to enable the primary plane
@@ -515,7 +517,7 @@ bool hwc_display_apply(struct hwc_display *display, drmModeAtomicReq *req)
 
 		/* Apply the best allocation */
 		i = 0;
-		hwc_list_for_each(plane, &display->planes, link) {
+		liftoff_list_for_each(plane, &display->planes, link) {
 			layer = alloc.best[i];
 			i++;
 			if (layer == NULL) {

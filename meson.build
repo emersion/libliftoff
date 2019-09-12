@@ -1,5 +1,5 @@
 project(
-	'hwc',
+	'liftoff',
 	'c',
 	version: '0.0.0',
 	license: 'MIT',
@@ -18,13 +18,13 @@ add_project_arguments(cc.get_supported_arguments([
 	'-Wno-unused-parameter',
 ]), language: 'c')
 
-hwc_inc = include_directories('include')
+liftoff_inc = include_directories('include')
 
 drm = dependency('libdrm')
 
-hwc_deps = [drm]
+liftoff_deps = [drm]
 
-hwc_lib = library(
+liftoff_lib = library(
 	meson.project_name(),
 	files(
 		'display.c',
@@ -32,27 +32,27 @@ hwc_lib = library(
 		'list.c',
 		'output.c',
 	),
-	include_directories: hwc_inc,
+	include_directories: liftoff_inc,
 	version: meson.project_version(),
-	dependencies: hwc_deps,
+	dependencies: liftoff_deps,
 	install: true,
 )
 
-hwc = declare_dependency(
-	link_with: hwc_lib,
-	include_directories: hwc_inc,
-	dependencies: hwc_deps,
+liftoff = declare_dependency(
+	link_with: liftoff_lib,
+	include_directories: liftoff_inc,
+	dependencies: liftoff_deps,
 )
 
 executable(
 	'example',
 	files('example.c'),
-	dependencies: [hwc],
+	dependencies: [liftoff],
 )
 
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
-	libraries: hwc_lib,
+	libraries: liftoff_lib,
 	version: meson.project_version(),
 	filebase: meson.project_name(),
 	name: meson.project_name(),

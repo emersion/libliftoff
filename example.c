@@ -1,6 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include <fcntl.h>
-#include <libhwc.h>
+#include <libliftoff.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -97,13 +97,13 @@ static const uint32_t colors[] = {
 	0xFFFFFF00, /* yellow */
 };
 
-static struct hwc_layer *add_layer(int drm_fd, struct hwc_output *output,
-				   int x, int y, int width, int height,
-				   bool with_alpha)
+static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output,
+				       int x, int y, int width, int height,
+				       bool with_alpha)
 {
 	static size_t color_idx = 0;
 	uint32_t fb_id;
-	struct hwc_layer *layer;
+	struct liftoff_layer *layer;
 
 	fb_id = create_argb_fb(drm_fd, width, height, colors[color_idx],
 			       with_alpha);
@@ -114,16 +114,16 @@ static struct hwc_layer *add_layer(int drm_fd, struct hwc_output *output,
 	printf("Created FB %d with size %dx%d\n", fb_id, width, height);
 	color_idx = (color_idx + 1) % (sizeof(colors) / sizeof(colors[0]));
 
-	layer = hwc_layer_create(output);
-	hwc_layer_set_property(layer, "FB_ID", fb_id);
-	hwc_layer_set_property(layer, "CRTC_X", x);
-	hwc_layer_set_property(layer, "CRTC_Y", y);
-	hwc_layer_set_property(layer, "CRTC_W", width);
-	hwc_layer_set_property(layer, "CRTC_H", height);
-	hwc_layer_set_property(layer, "SRC_X", 0);
-	hwc_layer_set_property(layer, "SRC_Y", 0);
-	hwc_layer_set_property(layer, "SRC_W", width << 16);
-	hwc_layer_set_property(layer, "SRC_H", height << 16);
+	layer = liftoff_layer_create(output);
+	liftoff_layer_set_property(layer, "FB_ID", fb_id);
+	liftoff_layer_set_property(layer, "CRTC_X", x);
+	liftoff_layer_set_property(layer, "CRTC_Y", y);
+	liftoff_layer_set_property(layer, "CRTC_W", width);
+	liftoff_layer_set_property(layer, "CRTC_H", height);
+	liftoff_layer_set_property(layer, "SRC_X", 0);
+	liftoff_layer_set_property(layer, "SRC_Y", 0);
+	liftoff_layer_set_property(layer, "SRC_W", width << 16);
+	liftoff_layer_set_property(layer, "SRC_H", height << 16);
 
 	return layer;
 }
@@ -131,12 +131,12 @@ static struct hwc_layer *add_layer(int drm_fd, struct hwc_output *output,
 int main(int argc, char *argv[])
 {
 	int drm_fd;
-	struct hwc_display *display;
+	struct liftoff_display *display;
 	drmModeRes *drm_res;
 	drmModeCrtc *crtc;
 	drmModeConnector *connector;
-	struct hwc_output *output;
-	struct hwc_layer *layers[4];
+	struct liftoff_output *output;
+	struct liftoff_layer *layers[4];
 	drmModeAtomicReq *req;
 	int ret;
 	size_t i;
@@ -156,16 +156,16 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	display = hwc_display_create(drm_fd);
+	display = liftoff_display_create(drm_fd);
 	if (display == NULL) {
-		perror("hwc_display_create");
+		perror("liftoff_display_create");
 		return 1;
 	}
 
 	drm_res = drmModeGetResources(drm_fd);
 	connector = pick_connector(drm_fd, drm_res);
 	crtc = pick_crtc(drm_fd, drm_res, connector);
-	output = hwc_output_create(display, crtc->crtc_id);
+	output = liftoff_output_create(display, crtc->crtc_id);
 	drmModeFreeResources(drm_res);
 
 	if (connector == NULL) {
@@ -186,14 +186,14 @@ int main(int argc, char *argv[])
 	layers[2] = add_layer(drm_fd, output, 300, 300, 128, 128, false);
 	layers[3] = add_layer(drm_fd, output, 400, 400, 128, 128, true);
 
-	hwc_layer_set_property(layers[0], "zpos", 0);
-	hwc_layer_set_property(layers[1], "zpos", 1);
-	hwc_layer_set_property(layers[2], "zpos", 2);
-	hwc_layer_set_property(layers[3], "zpos", 3);
+	liftoff_layer_set_property(layers[0], "zpos", 0);
+	liftoff_layer_set_property(layers[1], "zpos", 1);
+	liftoff_layer_set_property(layers[2], "zpos", 2);
+	liftoff_layer_set_property(layers[3], "zpos", 3);
 
 	req = drmModeAtomicAlloc();
-	if (!hwc_display_apply(display, req)) {
-		perror("hwc_display_commit");
+	if (!liftoff_display_apply(display, req)) {
+		perror("liftoff_display_commit");
 		return 1;
 	}
 
@@ -205,18 +205,18 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
 		printf("Layer %zu got assigned to plane %u\n", i,
-		       hwc_layer_get_plane_id(layers[i]));
+		       liftoff_layer_get_plane_id(layers[i]));
 	}
 
 	sleep(1);
 
 	drmModeAtomicFree(req);
 	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
-		hwc_layer_destroy(layers[i]);
+		liftoff_layer_destroy(layers[i]);
 	}
-	hwc_output_destroy(output);
+	liftoff_output_destroy(output);
 	drmModeFreeCrtc(crtc);
 	drmModeFreeConnector(connector);
-	hwc_display_destroy(display);
+	liftoff_display_destroy(display);
 	return 0;
 }
