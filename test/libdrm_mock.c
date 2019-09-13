@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -196,16 +197,25 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 						        PLANE_CRTC_ID,
 							&crtc_id);
 
+		has_fb = has_fb && fb_id != 0;
+		has_crtc = has_crtc && crtc_id != 0;
+
 		if (has_fb != has_crtc) {
+			fprintf(stderr, "plane %u: both FB_ID and CRTC_ID must "
+				"be set or unset together\n", plane->id);
 			return -EINVAL;
 		}
 
 		if (has_fb) {
 			if (crtc_id != liftoff_mock_drm_crtc_id) {
+				fprintf(stderr, "plane %u: invalid CRTC_ID\n",
+					plane->id);
 				return -EINVAL;
 			}
 			layer = mock_fb_get_layer(fb_id);
 			if (layer == NULL) {
+				fprintf(stderr, "plane %u: invalid FB_ID\n",
+					plane->id);
 				return -EINVAL;
 			}
 			found = false;
@@ -216,6 +226,9 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 				}
 			}
 			if (!found) {
+				fprintf(stderr, "plane %u: layer %p is not "
+					"compatible\n", plane->id,
+					(void *)layer);
 				return -EINVAL;
 			}
 		}
