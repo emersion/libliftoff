@@ -96,7 +96,8 @@ static struct liftoff_plane *plane_create(struct liftoff_display *display,
 	drmModeFreeObjectProperties(drm_props);
 
 	if (!has_type) {
-		fprintf(stderr, "plane %d is missing the 'type' property\n",
+		fprintf(stderr,
+			"plane %"PRIu32" is missing the 'type' property\n",
 			plane->id);
 		free(plane);
 		return NULL;
@@ -246,7 +247,8 @@ static bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer
 	if (layer == NULL) {
 		plane_prop = plane_get_property(plane, "FB_ID");
 		if (plane_prop == NULL) {
-			fprintf(stderr, "plane is missing the FB_ID property\n");
+			fprintf(stderr, "plane %"PRIu32" is missing the FB_ID "
+				"property\n", plane->id);
 			return false;
 		}
 		return plane_set_prop(plane, req, plane_prop, 0);
@@ -254,7 +256,8 @@ static bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer
 
 	plane_prop = plane_get_property(plane, "CRTC_ID");
 	if (plane_prop == NULL) {
-		fprintf(stderr, "plane is missing the CRTC_ID property\n");
+		fprintf(stderr, "plane %"PRIu32" is missing the CRTC_ID "
+			"property\n", plane->id);
 		return false;
 	}
 	if (!plane_set_prop(plane, req, plane_prop, layer->output->crtc_id)) {
@@ -304,8 +307,8 @@ struct plane_data {
 	int last_plane_zpos, last_layer_zpos;
 };
 
-bool output_choose_layers(struct liftoff_output *output, struct plane_alloc *alloc,
-			  struct plane_data *data)
+bool output_choose_layers(struct liftoff_output *output,
+			  struct plane_alloc *alloc, struct plane_data *data)
 {
 	struct liftoff_display *display;
 	struct liftoff_plane *plane;
@@ -350,7 +353,7 @@ bool output_choose_layers(struct liftoff_output *output, struct plane_alloc *all
 		goto skip;
 	}
 
-	fprintf(stderr, "Performing allocation for plane %d (%zu/%zu)\n",
+	fprintf(stderr, "Performing allocation for plane %"PRIu32" (%zu/%zu)\n",
 		plane->id, data->plane_idx + 1, alloc->planes_len);
 
 	liftoff_list_for_each(layer, &output->layers, link) {
@@ -376,7 +379,7 @@ bool output_choose_layers(struct liftoff_output *output, struct plane_alloc *all
 				/* This layer needs to be on top of the last
 				 * allocated one */
 				/* TODO: don't skip if they don't intersect? */
-				fprintf(stderr, "Layer %p -> plane %d: "
+				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 					"layer zpos invalid\n",
 					(void *)layer, plane->id);
 				continue;
@@ -387,7 +390,7 @@ bool output_choose_layers(struct liftoff_output *output, struct plane_alloc *all
 				 * allocated one, but this plane isn't under the
 				 * last one. This  */
 				/* TODO: don't skip if they don't intersect? */
-				fprintf(stderr, "Layer %p -> plane %d: "
+				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 					"plane zpos invalid\n",
 					(void *)layer, plane->id);
 				continue;
@@ -395,22 +398,23 @@ bool output_choose_layers(struct liftoff_output *output, struct plane_alloc *all
 		}
 
 		/* Try to use this layer for the current plane */
-		fprintf(stderr, "Layer %p -> plane %d: applying properties...\n",
-			(void *)layer, plane->id);
+		fprintf(stderr, "Layer %p -> plane %"PRIu32": "
+			"applying properties...\n", (void *)layer, plane->id);
 		data->alloc[data->plane_idx] = layer;
 		if (!plane_apply(plane, layer, alloc->req, &compatible)) {
 			return false;
 		}
 		if (!compatible) {
-			fprintf(stderr, "Layer %p -> plane %d: incompatible "
-				"properties\n", (void *)layer, plane->id);
+			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
+				"incompatible properties\n",
+				(void *)layer, plane->id);
 			continue;
 		}
 
 		ret = drmModeAtomicCommit(display->drm_fd, alloc->req,
 					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
 		if (ret == 0) {
-			fprintf(stderr, "Layer %p -> plane %d: success\n",
+			fprintf(stderr, "Layer %p -> plane %"PRIu32": success\n",
 				(void *)layer, plane->id);
 			/* Continue with the next plane */
 			next_data.score = data->score + 1;
