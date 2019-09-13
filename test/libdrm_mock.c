@@ -98,6 +98,21 @@ struct liftoff_mock_plane *liftoff_mock_drm_create_plane(int type)
 	return plane;
 }
 
+struct liftoff_mock_plane *liftoff_mock_drm_get_plane(uint32_t id)
+{
+	struct liftoff_mock_plane *plane;
+
+	plane = &mock_planes[0];
+	while (plane->id != 0) {
+		if (plane->id == id) {
+			return plane;
+		}
+		plane++;
+	}
+
+	assert(0);
+}
+
 void liftoff_mock_plane_add_compatible_layer(struct liftoff_mock_plane *plane,
 					     struct liftoff_layer *layer)
 {
