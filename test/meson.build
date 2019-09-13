@@ -21,7 +21,16 @@ test_alloc_exe = executable(
 	dependencies: mock_liftoff,
 )
 
-test(
-	'alloc',
-	test_alloc_exe,
-)
+alloc_tests = [
+	'basic',
+	'primary-nomatch',
+	'primary-match',
+]
+
+foreach name : alloc_tests
+	test(
+		'alloc@' + name,
+		test_alloc_exe,
+		args: [name],
+	)
+endforeach
