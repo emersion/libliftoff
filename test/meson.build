@@ -1,0 +1,27 @@
+test_inc = include_directories('include')
+
+# This mock library will replace libdrm
+mock_drm_lib = shared_library(
+	'drm',
+	files('libdrm_mock.c'),
+	include_directories: [test_inc],
+	dependencies: drm.partial_dependency(compile_args: true),
+	soversion: drm.version().split('.')[0], # TODO: get it from the real dep
+)
+
+mock_liftoff = declare_dependency(
+	link_with: [mock_drm_lib, liftoff_lib],
+	include_directories: [liftoff_inc, test_inc],
+	dependencies: drm.partial_dependency(compile_args: true),
+)
+
+test_alloc_exe = executable(
+	'test-alloc',
+	files('test_alloc.c'),
+	dependencies: mock_liftoff,
+)
+
+test(
+	'alloc',
+	test_alloc_exe,
+)

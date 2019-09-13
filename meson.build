@@ -58,3 +58,5 @@ pkgconfig.generate(
 	name: meson.project_name(),
 	description: 'Hardware composer library',
 )
+
+subdir('test')
