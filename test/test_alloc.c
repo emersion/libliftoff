@@ -43,16 +43,16 @@ struct test_case {
 
 static struct test_plane test_setup[] = {
 	{ .type = DRM_PLANE_TYPE_PRIMARY },
-	{ .type = DRM_PLANE_TYPE_OVERLAY },
-	{ .type = DRM_PLANE_TYPE_OVERLAY },
 	{ .type = DRM_PLANE_TYPE_CURSOR },
+	{ .type = DRM_PLANE_TYPE_OVERLAY },
+	{ .type = DRM_PLANE_TYPE_OVERLAY },
 };
 
 static const size_t test_setup_len = sizeof(test_setup) / sizeof(test_setup[0]);
 
 static struct test_case tests[] = {
 	{
-		.name = "primary-nomatch",
+		.name = "simple-1x-fail",
 		.layers = {
 			{
 				.width = 1920,
@@ -63,13 +63,36 @@ static struct test_case tests[] = {
 		},
 	},
 	{
-		.name = "primary-match",
+		.name = "simple-1x",
 		.layers = {
 			{
 				.width = 1920,
 				.height = 1080,
 				.compat = { &test_setup[0] },
 				.result = &test_setup[0],
+			},
+		},
+	},
+	{
+		.name = "simple-3x",
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.compat = { &test_setup[0] },
+				.result = &test_setup[0],
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.compat = { &test_setup[1] },
+				.result = &test_setup[1],
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.compat = { &test_setup[2] },
+				.result = &test_setup[2],
 			},
 		},
 	},

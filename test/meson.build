@@ -23,8 +23,9 @@ test_alloc_exe = executable(
 
 alloc_tests = [
 	'basic',
-	'primary-nomatch',
-	'primary-match',
+	'simple-1x',
+	'simple-1x-fail',
+	'simple-3x',
 ]
 
 foreach name : alloc_tests
