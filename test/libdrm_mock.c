@@ -235,7 +235,7 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 			}
 			found = false;
 			for (j = 0; j < MAX_LAYERS; j++) {
-				if (plane->compatible_layers[i] == layer) {
+				if (plane->compatible_layers[j] == layer) {
 					found = true;
 					break;
 				}
