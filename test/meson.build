@@ -26,6 +26,8 @@ alloc_tests = [
 	'simple-1x',
 	'simple-1x-fail',
 	'simple-3x',
+	'zpos-3x',
+	'zpos-4x-partial',
 ]
 
 foreach name : alloc_tests

@@ -32,6 +32,7 @@ struct test_plane {
 
 struct test_layer {
 	int x, y, width, height;
+	int zpos; /* zero means unset */
 	struct test_plane *compat[64];
 	struct test_plane *result;
 };
@@ -49,6 +50,10 @@ static struct test_plane test_setup[] = {
 };
 
 static const size_t test_setup_len = sizeof(test_setup) / sizeof(test_setup[0]);
+
+#define FIRST_3_PLANES { &test_setup[0], &test_setup[1], &test_setup[2] }
+#define FIRST_4_PLANES { &test_setup[0], &test_setup[1], &test_setup[2], \
+			 &test_setup[3] }
 
 static struct test_case tests[] = {
 	{
@@ -96,6 +101,65 @@ static struct test_case tests[] = {
 			},
 		},
 	},
+	{
+		.name = "zpos-3x",
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { &test_setup[0] },
+				.result = &test_setup[0],
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_3_PLANES,
+				.result = &test_setup[2],
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = FIRST_3_PLANES,
+				.result = &test_setup[1],
+			},
+		},
+	},
+	{
+		.name = "zpos-4x-partial",
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { &test_setup[0] },
+				.result = &test_setup[0],
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 4,
+				.compat = FIRST_4_PLANES,
+				.result = &test_setup[1],
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_4_PLANES,
+				.result = &test_setup[3],
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = FIRST_4_PLANES,
+				.result = NULL,
+			},
+		},
+	},
 };
 
 static void run_test(struct test_layer *test_layers)
@@ -126,6 +190,10 @@ static void run_test(struct test_layer *test_layers)
 		test_layer = &test_layers[i];
 		layers[i] = add_layer(output, test_layer->x, test_layer->y,
 				      test_layer->width, test_layer->height);
+		if (test_layer->zpos != 0) {
+			liftoff_layer_set_property(layers[i], "zpos",
+						   test_layer->zpos);
+		}
 		for (j = 0; test_layer->compat[j] != NULL; j++) {
 			mock_plane = mock_planes[test_layer->compat[j] -
 						 test_setup];
