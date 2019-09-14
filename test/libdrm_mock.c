@@ -26,7 +26,7 @@ struct liftoff_mock_prop {
 };
 
 struct _drmModeAtomicReq {
-	struct liftoff_mock_prop props[MAX_PROPS];
+	struct liftoff_mock_prop props[512];
 	int cursor;
 };
 
