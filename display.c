@@ -307,6 +307,45 @@ struct plane_data {
 	int last_plane_zpos, last_layer_zpos;
 };
 
+static bool is_layer_allocated(struct plane_data *data,
+			       struct liftoff_layer *layer)
+{
+	size_t i;
+
+	/* TODO: speed this up with an array of bools indicating whether a layer
+	 * has been allocated */
+	for (i = 0; i < data->plane_idx; i++) {
+		if (data->alloc[i] == layer) {
+			return true;
+		}
+	}
+	return false;
+}
+
+static bool has_composited_layer_on_top(struct liftoff_output *output,
+					struct plane_data *data, uint64_t zpos)
+{
+	struct liftoff_layer *other_layer;
+	struct liftoff_layer_property *other_zpos_prop;
+
+	liftoff_list_for_each(other_layer, &output->layers, link) {
+		if (is_layer_allocated(data, other_layer)) {
+			continue;
+		}
+
+		other_zpos_prop = layer_get_property(other_layer, "zpos");
+		if (other_zpos_prop == NULL) {
+			continue;
+		}
+
+		if (other_zpos_prop->value > zpos) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool output_choose_layers(struct liftoff_output *output,
 			  struct plane_alloc *alloc, struct plane_data *data)
 {
@@ -314,8 +353,8 @@ bool output_choose_layers(struct liftoff_output *output,
 	struct liftoff_plane *plane;
 	struct liftoff_layer *layer;
 	int cursor, ret;
-	size_t remaining_planes, i;
-	bool found, compatible;
+	size_t remaining_planes;
+	bool compatible;
 	struct plane_data next_data;
 	struct liftoff_layer_property *zpos_prop;
 
@@ -362,14 +401,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 
 		/* Skip this layer if already allocated */
-		found = false;
-		for (i = 0; i < data->plane_idx; i++) {
-			if (data->alloc[i] == layer) {
-				found = true;
-				break;
-			}
-		}
-		if (found) {
+		if (is_layer_allocated(data, layer)) {
 			continue;
 		}
 
@@ -407,6 +439,16 @@ bool output_choose_layers(struct liftoff_output *output,
 		if (!compatible) {
 			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 				"incompatible properties\n",
+				(void *)layer, plane->id);
+			continue;
+		}
+
+		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
+		    zpos_prop != NULL &&
+		    has_composited_layer_on_top(output, data,
+						zpos_prop->value)) {
+			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
+				"has composited layer on top\n",
 				(void *)layer, plane->id);
 			continue;
 		}
