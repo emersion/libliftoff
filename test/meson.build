@@ -27,7 +27,12 @@ alloc_tests = [
 	'simple-1x-fail',
 	'simple-3x',
 	'zpos-3x',
-	'zpos-4x-partial',
+	#'zpos-3x-intersect-fail',
+	'zpos-3x-intersect-partial',
+	#'zpos-3x-disjoint-partial',
+	#'zpos-3x-disjoint',
+	'zpos-4x-intersect-partial',
+	#'zpos-4x-disjoint',
 ]
 
 foreach name : alloc_tests

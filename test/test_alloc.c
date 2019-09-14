@@ -43,13 +43,17 @@ struct test_case {
 };
 
 static struct test_plane test_setup[] = {
-	{ .type = DRM_PLANE_TYPE_PRIMARY },
-	{ .type = DRM_PLANE_TYPE_CURSOR },
-	{ .type = DRM_PLANE_TYPE_OVERLAY },
-	{ .type = DRM_PLANE_TYPE_OVERLAY },
+	{ .type = DRM_PLANE_TYPE_PRIMARY }, /* zpos = 0 */
+	{ .type = DRM_PLANE_TYPE_CURSOR }, /* zpos = 2 */
+	{ .type = DRM_PLANE_TYPE_OVERLAY }, /* zpos = 1 */
+	{ .type = DRM_PLANE_TYPE_OVERLAY }, /* zpos = 1 */
 };
 
 static const size_t test_setup_len = sizeof(test_setup) / sizeof(test_setup[0]);
+
+#define PRIMARY_PLANE &test_setup[0]
+#define CURSOR_PLANE &test_setup[1]
+#define OVERLAY_PLANE &test_setup[2]
 
 #define FIRST_3_PLANES { &test_setup[0], &test_setup[1], &test_setup[2] }
 #define FIRST_4_PLANES { &test_setup[0], &test_setup[1], &test_setup[2], \
@@ -73,8 +77,8 @@ static struct test_case tests[] = {
 			{
 				.width = 1920,
 				.height = 1080,
-				.compat = { &test_setup[0] },
-				.result = &test_setup[0],
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
 			},
 		},
 	},
@@ -84,20 +88,20 @@ static struct test_case tests[] = {
 			{
 				.width = 1920,
 				.height = 1080,
-				.compat = { &test_setup[0] },
-				.result = &test_setup[0],
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
-				.compat = { &test_setup[1] },
-				.result = &test_setup[1],
+				.compat = { CURSOR_PLANE },
+				.result = CURSOR_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
-				.compat = { &test_setup[2] },
-				.result = &test_setup[2],
+				.compat = { OVERLAY_PLANE },
+				.result = OVERLAY_PLANE,
 			},
 		},
 	},
@@ -108,41 +112,166 @@ static struct test_case tests[] = {
 				.width = 1920,
 				.height = 1080,
 				.zpos = 1,
-				.compat = { &test_setup[0] },
-				.result = &test_setup[0],
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
 				.compat = FIRST_3_PLANES,
-				.result = &test_setup[2],
+				.result = OVERLAY_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
 				.zpos = 3,
 				.compat = FIRST_3_PLANES,
-				.result = &test_setup[1],
+				.result = CURSOR_PLANE,
 			},
 		},
 	},
 	{
-		.name = "zpos-4x-partial",
+		.name = "zpos-3x-intersect-fail",
+		/* Layer 1 is over layer 2 but falls back to composition. Since
+		 * they intersect, layer 2 needs to be composited too. */
 		.layers = {
 			{
 				.width = 1920,
 				.height = 1080,
 				.zpos = 1,
-				.compat = { &test_setup[0] },
-				.result = &test_setup[0],
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { NULL },
+				.result = NULL,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_3_PLANES,
+				.result = NULL,
+			},
+		},
+	},
+	{
+		.name = "zpos-3x-intersect-partial",
+		/* Layer 1 is only compatible with the cursor plane. Layer 2 is
+		 * only compatible with the overlay plane. Layer 2 is over layer
+		 * 1, but the cursor plane is over the overlay plane. There is a
+		 * zpos conflict, only one of these two layers can be mapped to
+		 * a plane. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = { CURSOR_PLANE },
+				.result = CURSOR_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { OVERLAY_PLANE },
+				.result = NULL,
+			},
+		},
+	},
+	{
+		.name = "zpos-3x-disjoint-partial",
+		/* Layer 1 is over layer 2 and falls back to composition. Since
+		 * they don't intersect, layer 2 can be mapped to a plane. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { NULL },
+				.result = NULL,
+			},
+			{
+				.x = 100,
+				.y = 100,
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = { CURSOR_PLANE },
+				.result = CURSOR_PLANE,
+			},
+		},
+	},
+	{
+		.name = "zpos-3x-disjoint",
+		/* Layer 1 is only compatible with the cursor plane. Layer 2 is
+		 * only compatible with the overlay plane. Layer 2 is over layer
+		 * 1, but the cursor plane is over the overlay plane. There is a
+		 * zpos conflict, however since these two layers don't
+		 * intersect, we can still map them to planes. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = { CURSOR_PLANE },
+				.result = CURSOR_PLANE,
+			},
+			{
+				.x = 100,
+				.y = 100,
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { OVERLAY_PLANE },
+				.result = OVERLAY_PLANE,
+			},
+		},
+	},
+	{
+		.name = "zpos-4x-intersect-partial",
+		/* We have 4 layers and 4 planes. However since they all
+		 * intersect and the ordering between both overlay planes is
+		 * undefined, we can only use 3 planes. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
 				.zpos = 4,
 				.compat = FIRST_4_PLANES,
-				.result = &test_setup[1],
+				.result = CURSOR_PLANE,
 			},
 			{
 				.width = 100,
@@ -157,6 +286,44 @@ static struct test_case tests[] = {
 				.zpos = 3,
 				.compat = FIRST_4_PLANES,
 				.result = NULL,
+			},
+		},
+	},
+	{
+		.name = "zpos-4x-disjoint",
+		/* Ordering between the two overlay planes isn't defined,
+		 * however layers 2 and 3 don't intersect so they can be mapped
+		 * to these planes nonetheless. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 4,
+				.compat = FIRST_4_PLANES,
+				.result = CURSOR_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_4_PLANES,
+				.result = &test_setup[3],
+			},
+			{
+				.x = 100,
+				.y = 100,
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = FIRST_4_PLANES,
+				.result = OVERLAY_PLANE,
 			},
 		},
 	},
