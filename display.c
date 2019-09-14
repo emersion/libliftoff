@@ -429,6 +429,16 @@ bool output_choose_layers(struct liftoff_output *output,
 			}
 		}
 
+		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
+		    zpos_prop != NULL &&
+		    has_composited_layer_on_top(output, data,
+						zpos_prop->value)) {
+			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
+				"has composited layer on top\n",
+				(void *)layer, plane->id);
+			continue;
+		}
+
 		/* Try to use this layer for the current plane */
 		fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 			"applying properties...\n", (void *)layer, plane->id);
@@ -439,16 +449,6 @@ bool output_choose_layers(struct liftoff_output *output,
 		if (!compatible) {
 			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 				"incompatible properties\n",
-				(void *)layer, plane->id);
-			continue;
-		}
-
-		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
-		    zpos_prop != NULL &&
-		    has_composited_layer_on_top(output, data,
-						zpos_prop->value)) {
-			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
-				"has composited layer on top\n",
 				(void *)layer, plane->id);
 			continue;
 		}
