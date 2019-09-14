@@ -368,6 +368,47 @@ static struct test_case tests[] = {
 			},
 		},
 	},
+	{
+		.name = "zpos-4x-domino-partial",
+		/* A layer on top falls back to composition. A layer at zpos=2
+		 * falls back to composition too because it's underneath. A
+		 * layer at zpos=3 doesn't intersect with the one at zpos=4 and
+		 * is over the one at zpos=2 so it can be mapped to a plane. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 4,
+				.compat = { NULL },
+				.result = NULL,
+			},
+			{
+				.x = 100,
+				.y = 100,
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = FIRST_4_PLANES,
+				.result = CURSOR_PLANE,
+			},
+			{
+				.x = 50,
+				.y = 50,
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_4_PLANES,
+				.result = NULL,
+			},
+		},
+	},
 };
 
 static void run_test(struct test_layer *test_layers)

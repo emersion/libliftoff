@@ -34,6 +34,7 @@ alloc_tests = [
 	'zpos-4x-intersect-partial',
 	#'zpos-4x-disjoint',
 	'zpos-4x-domino-fail',
+	#'zpos-4x-domino-partial',
 ]
 
 foreach name : alloc_tests
