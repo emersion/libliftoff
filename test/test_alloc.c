@@ -327,6 +327,47 @@ static struct test_case tests[] = {
 			},
 		},
 	},
+	{
+		.name = "zpos-4x-domino-fail",
+		/* A layer on top falls back to composition. There is a layer at
+		 * zpos=2 which doesn't overlap and could be mapped to a plane,
+		 * however another layer at zpos=3 overlaps both and prevents
+		 * all layers from being mapped to a plane. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 4,
+				.compat = { NULL },
+				.result = NULL,
+			},
+			{
+				.x = 100,
+				.y = 100,
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_4_PLANES,
+				.result = NULL,
+			},
+			{
+				.x = 50,
+				.y = 50,
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = FIRST_4_PLANES,
+				.result = NULL,
+			},
+		},
+	},
 };
 
 static void run_test(struct test_layer *test_layers)
