@@ -74,3 +74,29 @@ uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer)
 	}
 	return layer->plane->id;
 }
+
+void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)
+{
+	struct liftoff_layer_property *x_prop, *y_prop, *w_prop, *h_prop;
+
+	x_prop = layer_get_property(layer, "CRTC_X");
+	y_prop = layer_get_property(layer, "CRTC_Y");
+	w_prop = layer_get_property(layer, "CRTC_W");
+	h_prop = layer_get_property(layer, "CRTC_H");
+
+	rect->x = x_prop != NULL ? x_prop->value : 0;
+	rect->y = y_prop != NULL ? y_prop->value : 0;
+	rect->width = w_prop != NULL ? w_prop->value : 0;
+	rect->height = h_prop != NULL ? h_prop->value : 0;
+}
+
+bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b)
+{
+	struct liftoff_rect ra, rb;
+
+	layer_get_rect(a, &ra);
+	layer_get_rect(b, &rb);
+
+	return ra.x < rb.x + rb.width && ra.y < rb.y + rb.height &&
+	       ra.x + ra.width > rb.x && ra.y + ra.height > rb.y;
+}

@@ -57,7 +57,14 @@ struct liftoff_plane_property {
 	uint32_t id;
 };
 
+struct liftoff_rect {
+	int x, y;
+	int width, height;
+};
+
 struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 						  const char *name);
+void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
+bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
 
 #endif
