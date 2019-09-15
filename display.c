@@ -361,7 +361,7 @@ struct plane_data {
 
 	struct liftoff_layer **alloc; /* only items up to plane_idx are valid */
 	int score;
-	int last_plane_zpos, last_layer_zpos;
+	int last_layer_zpos;
 };
 
 static void plane_data_init_next(struct plane_data *data,
@@ -382,11 +382,6 @@ static void plane_data_init_next(struct plane_data *data,
 		data->score = prev->score + 1;
 	} else {
 		data->score = prev->score;
-	}
-	if (layer != NULL && plane->type != DRM_PLANE_TYPE_PRIMARY) {
-		data->last_plane_zpos = plane->zpos;
-	} else {
-		data->last_plane_zpos = prev->last_plane_zpos;
 	}
 
 	zpos_prop = NULL;
@@ -664,7 +659,6 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 		data.plane_idx = 0;
 		data.score = 0;
 		data.last_layer_zpos = INT_MAX;
-		data.last_plane_zpos = INT_MAX;
 		if (!output_choose_layers(output, &alloc, &data)) {
 			return false;
 		}
