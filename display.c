@@ -410,9 +410,9 @@ static bool is_layer_allocated(struct plane_data *data,
 	return false;
 }
 
-static bool has_composited_layer_on_top(struct liftoff_output *output,
-					struct plane_data *data,
-					struct liftoff_layer *layer)
+static bool has_composited_layer_over(struct liftoff_output *output,
+				      struct plane_data *data,
+				      struct liftoff_layer *layer)
 {
 	struct liftoff_layer *other_layer;
 	struct liftoff_layer_property *zpos_prop, *other_zpos_prop;
@@ -475,6 +475,9 @@ static bool has_allocated_layer_over(struct liftoff_output *output,
 			continue;
 		}
 
+		/* Since plane zpos is descending, this means the other layer is
+		 * supposed to be under but is mapped to a plane over the
+		 * current one. */
 		if (zpos_prop->value > other_zpos_prop->value &&
 		    layer_intersects(layer, other_layer)) {
 			return true;
@@ -595,7 +598,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 
 		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
-		    has_composited_layer_on_top(output, data, layer)) {
+		    has_composited_layer_over(output, data, layer)) {
 			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 				"has composited layer on top\n",
 				(void *)layer, plane->id);
