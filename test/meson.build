@@ -32,7 +32,8 @@ alloc_tests = [
 	'zpos-3x-disjoint-partial',
 	#'zpos-3x-disjoint',
 	'zpos-4x-intersect-partial',
-	'zpos-4x-disjoint',
+	#'zpos-4x-disjoint',
+	'zpos-4x-disjoint-alt',
 	'zpos-4x-domino-fail',
 	'zpos-4x-domino-partial',
 ]

@@ -314,7 +314,44 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
+				.compat = { &test_setup[3] },
+				.result = &test_setup[3],
+			},
+			{
+				.x = 100,
+				.y = 100,
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { OVERLAY_PLANE },
+				.result = OVERLAY_PLANE,
+			},
+		},
+	},
+	{
+		.name = "zpos-4x-disjoint-alt",
+		/* Same as zpos-4x-disjoint, but with the last two layers'
+		 * plane swapped. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 4,
 				.compat = FIRST_3_SECONDARY_PLANES,
+				.result = CURSOR_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = { OVERLAY_PLANE },
 				.result = OVERLAY_PLANE,
 			},
 			{
@@ -323,7 +360,7 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 3,
-				.compat = FIRST_3_SECONDARY_PLANES,
+				.compat = { &test_setup[3] },
 				.result = &test_setup[3],
 			},
 		},
