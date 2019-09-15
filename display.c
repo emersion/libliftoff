@@ -446,6 +446,37 @@ static bool has_composited_layer_on_top(struct liftoff_output *output,
 	return false;
 }
 
+static bool has_allocated_plane_under(struct liftoff_output *output,
+				      struct plane_data *data,
+				      struct liftoff_layer *layer)
+{
+	struct liftoff_plane *plane, *other_plane;
+	ssize_t i;
+
+	plane = liftoff_container_of(data->plane_link, plane, link);
+
+	i = -1;
+	liftoff_list_for_each(other_plane, &output->display->planes, link) {
+		i++;
+		if (i >= (ssize_t)data->plane_idx) {
+			break;
+		}
+		if (other_plane->type == DRM_PLANE_TYPE_PRIMARY) {
+			continue;
+		}
+		if (data->alloc[i] == NULL) {
+			continue;
+		}
+
+		if (plane->zpos >= other_plane->zpos &&
+		    layer_intersects(layer, data->alloc[i])) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 bool output_choose_layers(struct liftoff_output *output,
 			  struct plane_alloc *alloc, struct plane_data *data)
 {
@@ -512,11 +543,12 @@ bool output_choose_layers(struct liftoff_output *output,
 				continue;
 			}
 			if ((int)zpos_prop->value < data->last_layer_zpos &&
-			    plane->zpos >= data->last_plane_zpos) {
+			    has_allocated_plane_under(output, data, layer)) {
 				/* This layer needs to be under the last
 				 * allocated one, but this plane isn't under the
-				 * last one */
-				/* TODO: don't skip if they don't intersect? */
+				 * last one (in practice, since planes are
+				 * sorted by zpos it means it has the same zpos,
+				 * ie. undefined ordering). */
 				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 					"plane zpos invalid\n",
 					(void *)layer, plane->id);

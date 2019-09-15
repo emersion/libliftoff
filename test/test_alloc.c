@@ -315,7 +315,7 @@ static struct test_case tests[] = {
 				.height = 100,
 				.zpos = 2,
 				.compat = FIRST_3_SECONDARY_PLANES,
-				.result = &test_setup[3],
+				.result = OVERLAY_PLANE,
 			},
 			{
 				.x = 100,
@@ -324,7 +324,7 @@ static struct test_case tests[] = {
 				.height = 100,
 				.zpos = 3,
 				.compat = FIRST_3_SECONDARY_PLANES,
-				.result = OVERLAY_PLANE,
+				.result = &test_setup[3],
 			},
 		},
 	},
