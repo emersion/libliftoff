@@ -346,7 +346,7 @@ static bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer
  */
 
 /* Global data for the allocation algorithm */
-struct plane_alloc {
+struct alloc_result {
 	drmModeAtomicReq *req;
 	size_t planes_len;
 
@@ -355,7 +355,7 @@ struct plane_alloc {
 };
 
 /* Transient data, arguments for each step */
-struct plane_data {
+struct alloc_step {
 	struct liftoff_list *plane_link; /* liftoff_plane.link */
 	size_t plane_idx;
 
@@ -364,8 +364,8 @@ struct plane_data {
 	int last_layer_zpos;
 };
 
-static void plane_data_init_next(struct plane_data *data,
-				 struct plane_data *prev,
+static void plane_step_init_next(struct alloc_step *step,
+				 struct alloc_step *prev,
 				 struct liftoff_layer *layer)
 {
 	struct liftoff_plane *plane;
@@ -373,15 +373,15 @@ static void plane_data_init_next(struct plane_data *data,
 
 	plane = liftoff_container_of(prev->plane_link, plane, link);
 
-	data->plane_link = prev->plane_link->next;
-	data->plane_idx = prev->plane_idx + 1;
-	data->alloc = prev->alloc;
-	data->alloc[prev->plane_idx] = layer;
+	step->plane_link = prev->plane_link->next;
+	step->plane_idx = prev->plane_idx + 1;
+	step->alloc = prev->alloc;
+	step->alloc[prev->plane_idx] = layer;
 
 	if (layer != NULL) {
-		data->score = prev->score + 1;
+		step->score = prev->score + 1;
 	} else {
-		data->score = prev->score;
+		step->score = prev->score;
 	}
 
 	zpos_prop = NULL;
@@ -389,21 +389,21 @@ static void plane_data_init_next(struct plane_data *data,
 		zpos_prop = layer_get_property(layer, "zpos");
 	}
 	if (zpos_prop != NULL && plane->type != DRM_PLANE_TYPE_PRIMARY) {
-		data->last_layer_zpos = zpos_prop->value;
+		step->last_layer_zpos = zpos_prop->value;
 	} else {
-		data->last_layer_zpos = prev->last_layer_zpos;
+		step->last_layer_zpos = prev->last_layer_zpos;
 	}
 }
 
-static bool is_layer_allocated(struct plane_data *data,
+static bool is_layer_allocated(struct alloc_step *step,
 			       struct liftoff_layer *layer)
 {
 	size_t i;
 
 	/* TODO: speed this up with an array of bools indicating whether a layer
 	 * has been allocated */
-	for (i = 0; i < data->plane_idx; i++) {
-		if (data->alloc[i] == layer) {
+	for (i = 0; i < step->plane_idx; i++) {
+		if (step->alloc[i] == layer) {
 			return true;
 		}
 	}
@@ -411,7 +411,7 @@ static bool is_layer_allocated(struct plane_data *data,
 }
 
 static bool has_composited_layer_over(struct liftoff_output *output,
-				      struct plane_data *data,
+				      struct alloc_step *step,
 				      struct liftoff_layer *layer)
 {
 	struct liftoff_layer *other_layer;
@@ -423,7 +423,7 @@ static bool has_composited_layer_over(struct liftoff_output *output,
 	}
 
 	liftoff_list_for_each(other_layer, &output->layers, link) {
-		if (is_layer_allocated(data, other_layer)) {
+		if (is_layer_allocated(step, other_layer)) {
 			continue;
 		}
 
@@ -442,7 +442,7 @@ static bool has_composited_layer_over(struct liftoff_output *output,
 }
 
 static bool has_allocated_layer_over(struct liftoff_output *output,
-				     struct plane_data *data,
+				     struct alloc_step *step,
 				     struct liftoff_layer *layer)
 {
 	ssize_t i;
@@ -458,14 +458,14 @@ static bool has_allocated_layer_over(struct liftoff_output *output,
 	i = -1;
 	liftoff_list_for_each(other_plane, &output->display->planes, link) {
 		i++;
-		if (i >= (ssize_t)data->plane_idx) {
+		if (i >= (ssize_t)step->plane_idx) {
 			break;
 		}
 		if (other_plane->type == DRM_PLANE_TYPE_PRIMARY) {
 			continue;
 		}
 
-		other_layer = data->alloc[i];
+		other_layer = step->alloc[i];
 		if (other_layer == NULL) {
 			continue;
 		}
@@ -488,29 +488,29 @@ static bool has_allocated_layer_over(struct liftoff_output *output,
 }
 
 static bool has_allocated_plane_under(struct liftoff_output *output,
-				      struct plane_data *data,
+				      struct alloc_step *step,
 				      struct liftoff_layer *layer)
 {
 	struct liftoff_plane *plane, *other_plane;
 	ssize_t i;
 
-	plane = liftoff_container_of(data->plane_link, plane, link);
+	plane = liftoff_container_of(step->plane_link, plane, link);
 
 	i = -1;
 	liftoff_list_for_each(other_plane, &output->display->planes, link) {
 		i++;
-		if (i >= (ssize_t)data->plane_idx) {
+		if (i >= (ssize_t)step->plane_idx) {
 			break;
 		}
 		if (other_plane->type == DRM_PLANE_TYPE_PRIMARY) {
 			continue;
 		}
-		if (data->alloc[i] == NULL) {
+		if (step->alloc[i] == NULL) {
 			continue;
 		}
 
 		if (plane->zpos >= other_plane->zpos &&
-		    layer_intersects(layer, data->alloc[i])) {
+		    layer_intersects(layer, step->alloc[i])) {
 			return true;
 		}
 	}
@@ -519,7 +519,7 @@ static bool has_allocated_plane_under(struct liftoff_output *output,
 }
 
 bool output_choose_layers(struct liftoff_output *output,
-			  struct plane_alloc *alloc, struct plane_data *data)
+			  struct alloc_result *result, struct alloc_step *step)
 {
 	struct liftoff_display *display;
 	struct liftoff_plane *plane;
@@ -527,30 +527,30 @@ bool output_choose_layers(struct liftoff_output *output,
 	int cursor, ret;
 	size_t remaining_planes;
 	bool compatible;
-	struct plane_data next_data;
+	struct alloc_step next_step;
 	struct liftoff_layer_property *zpos_prop;
 
 	display = output->display;
 
-	if (data->plane_link == &display->planes) { /* Allocation finished */
-		if (data->score > alloc->best_score) {
+	if (step->plane_link == &display->planes) { /* Allocation finished */
+		if (step->score > result->best_score) {
 			/* We found a better allocation */
-			alloc->best_score = data->score;
-			memcpy(alloc->best, data->alloc,
-			       alloc->planes_len * sizeof(struct liftoff_layer *));
+			result->best_score = step->score;
+			memcpy(result->best, step->alloc,
+			       result->planes_len * sizeof(struct liftoff_layer *));
 		}
 		return true;
 	}
-	plane = liftoff_container_of(data->plane_link, plane, link);
+	plane = liftoff_container_of(step->plane_link, plane, link);
 
-	remaining_planes = alloc->planes_len - data->plane_idx;
-	if (alloc->best_score >= data->score + (int)remaining_planes) {
+	remaining_planes = result->planes_len - step->plane_idx;
+	if (result->best_score >= step->score + (int)remaining_planes) {
 		/* Even if we find a layer for all remaining planes, we won't
 		 * find a better allocation. Give up. */
 		return true;
 	}
 
-	cursor = drmModeAtomicGetCursor(alloc->req);
+	cursor = drmModeAtomicGetCursor(result->req);
 
 	if (plane->layer != NULL) {
 		goto skip;
@@ -560,7 +560,7 @@ bool output_choose_layers(struct liftoff_output *output,
 	}
 
 	fprintf(stderr, "Performing allocation for plane %"PRIu32" (%zu/%zu)\n",
-		plane->id, data->plane_idx + 1, alloc->planes_len);
+		plane->id, step->plane_idx + 1, result->planes_len);
 
 	liftoff_list_for_each(layer, &output->layers, link) {
 		if (layer->plane != NULL) {
@@ -568,14 +568,14 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 
 		/* Skip this layer if already allocated */
-		if (is_layer_allocated(data, layer)) {
+		if (is_layer_allocated(step, layer)) {
 			continue;
 		}
 
 		zpos_prop = layer_get_property(layer, "zpos");
 		if (zpos_prop != NULL) {
-			if ((int)zpos_prop->value > data->last_layer_zpos &&
-			    has_allocated_layer_over(output, data, layer)) {
+			if ((int)zpos_prop->value > step->last_layer_zpos &&
+			    has_allocated_layer_over(output, step, layer)) {
 				/* This layer needs to be on top of the last
 				 * allocated one */
 				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
@@ -583,8 +583,8 @@ bool output_choose_layers(struct liftoff_output *output,
 					(void *)layer, plane->id);
 				continue;
 			}
-			if ((int)zpos_prop->value < data->last_layer_zpos &&
-			    has_allocated_plane_under(output, data, layer)) {
+			if ((int)zpos_prop->value < step->last_layer_zpos &&
+			    has_allocated_plane_under(output, step, layer)) {
 				/* This layer needs to be under the last
 				 * allocated one, but this plane isn't under the
 				 * last one (in practice, since planes are
@@ -598,7 +598,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 
 		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
-		    has_composited_layer_over(output, data, layer)) {
+		    has_composited_layer_over(output, step, layer)) {
 			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 				"has composited layer on top\n",
 				(void *)layer, plane->id);
@@ -608,7 +608,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		/* Try to use this layer for the current plane */
 		fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 			"applying properties...\n", (void *)layer, plane->id);
-		if (!plane_apply(plane, layer, alloc->req, &compatible)) {
+		if (!plane_apply(plane, layer, result->req, &compatible)) {
 			return false;
 		}
 		if (!compatible) {
@@ -618,14 +618,14 @@ bool output_choose_layers(struct liftoff_output *output,
 			continue;
 		}
 
-		ret = drmModeAtomicCommit(display->drm_fd, alloc->req,
+		ret = drmModeAtomicCommit(display->drm_fd, result->req,
 					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
 		if (ret == 0) {
 			fprintf(stderr, "Layer %p -> plane %"PRIu32": success\n",
 				(void *)layer, plane->id);
 			/* Continue with the next plane */
-			plane_data_init_next(&next_data, data, layer);
-			if (!output_choose_layers(output, alloc, &next_data)) {
+			plane_step_init_next(&next_step, step, layer);
+			if (!output_choose_layers(output, result, &next_step)) {
 				return false;
 			}
 		} else if (-ret != EINVAL && -ret != ERANGE) {
@@ -633,16 +633,16 @@ bool output_choose_layers(struct liftoff_output *output,
 			return false;
 		}
 
-		drmModeAtomicSetCursor(alloc->req, cursor);
+		drmModeAtomicSetCursor(result->req, cursor);
 	}
 
 skip:
 	/* Try not to use the current plane */
-	plane_data_init_next(&next_data, data, NULL);
-	if (!output_choose_layers(output, alloc, &next_data)) {
+	plane_step_init_next(&next_step, step, NULL);
+	if (!output_choose_layers(output, result, &next_step)) {
 		return false;
 	}
-	drmModeAtomicSetCursor(alloc->req, cursor);
+	drmModeAtomicSetCursor(result->req, cursor);
 
 	return true;
 }
@@ -652,8 +652,8 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	struct liftoff_output *output;
 	struct liftoff_plane *plane;
 	struct liftoff_layer *layer;
-	struct plane_alloc alloc;
-	struct plane_data data;
+	struct alloc_result result;
+	struct alloc_step step;
 	size_t i;
 	bool compatible;
 
@@ -678,12 +678,12 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 		}
 	}
 
-	alloc.req = req;
-	alloc.planes_len = liftoff_list_length(&display->planes);
+	result.req = req;
+	result.planes_len = liftoff_list_length(&display->planes);
 
-	data.alloc = malloc(alloc.planes_len * sizeof(*data.alloc));
-	alloc.best = malloc(alloc.planes_len * sizeof(*alloc.best));
-	if (data.alloc == NULL || alloc.best == NULL) {
+	step.alloc = malloc(result.planes_len * sizeof(*step.alloc));
+	result.best = malloc(result.planes_len * sizeof(*result.best));
+	if (step.alloc == NULL || result.best == NULL) {
 		perror("malloc");
 		return false;
 	}
@@ -699,23 +699,23 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 		 * some drivers want user-space to enable the primary plane
 		 * before any other plane. */
 
-		alloc.best_score = 0;
-		memset(alloc.best, 0, alloc.planes_len * sizeof(*alloc.best));
-		data.plane_link = display->planes.next;
-		data.plane_idx = 0;
-		data.score = 0;
-		data.last_layer_zpos = INT_MAX;
-		if (!output_choose_layers(output, &alloc, &data)) {
+		result.best_score = 0;
+		memset(result.best, 0, result.planes_len * sizeof(*result.best));
+		step.plane_link = display->planes.next;
+		step.plane_idx = 0;
+		step.score = 0;
+		step.last_layer_zpos = INT_MAX;
+		if (!output_choose_layers(output, &result, &step)) {
 			return false;
 		}
 
 		fprintf(stderr, "Found plane allocation for output %p "
-			"with score=%d\n", (void *)output, alloc.best_score);
+			"with score=%d\n", (void *)output, result.best_score);
 
 		/* Apply the best allocation */
 		i = 0;
 		liftoff_list_for_each(plane, &display->planes, link) {
-			layer = alloc.best[i];
+			layer = result.best[i];
 			i++;
 			if (layer == NULL) {
 				continue;
@@ -735,8 +735,8 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 		}
 	}
 
-	free(data.alloc);
-	free(alloc.best);
+	free(step.alloc);
+	free(result.best);
 
 	return true;
 }
