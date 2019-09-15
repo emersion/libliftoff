@@ -364,6 +364,42 @@ struct plane_data {
 	int last_plane_zpos, last_layer_zpos;
 };
 
+static void plane_data_init_next(struct plane_data *data,
+				 struct plane_data *prev,
+				 struct liftoff_layer *layer)
+{
+	struct liftoff_plane *plane;
+	struct liftoff_layer_property *zpos_prop;
+
+	plane = liftoff_container_of(prev->plane_link, plane, link);
+
+	data->plane_link = prev->plane_link->next;
+	data->plane_idx = prev->plane_idx + 1;
+	data->alloc = prev->alloc;
+	data->alloc[prev->plane_idx] = layer;
+
+	if (layer != NULL) {
+		data->score = prev->score + 1;
+	} else {
+		data->score = prev->score;
+	}
+	if (layer != NULL && plane->type != DRM_PLANE_TYPE_PRIMARY) {
+		data->last_plane_zpos = plane->zpos;
+	} else {
+		data->last_plane_zpos = prev->last_plane_zpos;
+	}
+
+	zpos_prop = NULL;
+	if (layer != NULL) {
+		zpos_prop = layer_get_property(layer, "zpos");
+	}
+	if (zpos_prop != NULL && plane->type != DRM_PLANE_TYPE_PRIMARY) {
+		data->last_layer_zpos = zpos_prop->value;
+	} else {
+		data->last_layer_zpos = prev->last_layer_zpos;
+	}
+}
+
 static bool is_layer_allocated(struct plane_data *data,
 			       struct liftoff_layer *layer)
 {
@@ -427,11 +463,6 @@ bool output_choose_layers(struct liftoff_output *output,
 		return true;
 	}
 	plane = liftoff_container_of(data->plane_link, plane, link);
-
-	/* These don't change depending on the layer we choose */
-	next_data.plane_link = data->plane_link->next;
-	next_data.plane_idx = data->plane_idx + 1;
-	next_data.alloc = data->alloc;
 
 	remaining_planes = alloc->planes_len - data->plane_idx;
 	if (alloc->best_score >= data->score + (int)remaining_planes) {
@@ -499,7 +530,6 @@ bool output_choose_layers(struct liftoff_output *output,
 		/* Try to use this layer for the current plane */
 		fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 			"applying properties...\n", (void *)layer, plane->id);
-		data->alloc[data->plane_idx] = layer;
 		if (!plane_apply(plane, layer, alloc->req, &compatible)) {
 			return false;
 		}
@@ -516,18 +546,7 @@ bool output_choose_layers(struct liftoff_output *output,
 			fprintf(stderr, "Layer %p -> plane %"PRIu32": success\n",
 				(void *)layer, plane->id);
 			/* Continue with the next plane */
-			next_data.score = data->score + 1;
-			if (plane->type != DRM_PLANE_TYPE_PRIMARY) {
-				next_data.last_plane_zpos = plane->zpos;
-			} else {
-				next_data.last_plane_zpos = data->last_plane_zpos;
-			}
-			if (zpos_prop != NULL &&
-			    plane->type != DRM_PLANE_TYPE_PRIMARY) {
-				next_data.last_layer_zpos = zpos_prop->value;
-			} else {
-				next_data.last_layer_zpos = data->last_layer_zpos;
-			}
+			plane_data_init_next(&next_data, data, layer);
 			if (!output_choose_layers(output, alloc, &next_data)) {
 				return false;
 			}
@@ -541,10 +560,7 @@ bool output_choose_layers(struct liftoff_output *output,
 
 skip:
 	/* Try not to use the current plane */
-	data->alloc[data->plane_idx] = NULL;
-	next_data.score = data->score;
-	next_data.last_layer_zpos = data->last_layer_zpos;
-	next_data.last_plane_zpos = data->last_plane_zpos;
+	plane_data_init_next(&next_data, data, NULL);
 	if (!output_choose_layers(output, alloc, &next_data)) {
 		return false;
 	}
