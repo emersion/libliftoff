@@ -288,6 +288,63 @@ static bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer
 	return true;
 }
 
+/* Plane allocation algorithm
+ *
+ * Goal: KMS exposes a set of hardware planes, user submitted a set of layers.
+ * We want to map as many layers as possible to planes.
+ *
+ * However, all layers can't be mapped to any plane. There are constraints,
+ * sometimes depending on driver-specific limitations or the configuration of
+ * other planes.
+ *
+ * The only way to discover driver-specific limitations is via an atomic test
+ * commit: we submit a plane configuration, and KMS replies whether it's
+ * supported or not. Thus we need to incrementally build a valid configuration.
+ *
+ * Let's take an example with 2 planes and 3 layers. Plane 1 is only compatible
+ * with layer 2 and plane 2 is only compatible with layer 3. Our algorithm will
+ * discover the solution by building the mapping one plane at a time. It first
+ * starts with plane 1: an atomic commit assigning layer 1 to plane 1 is
+ * submitted. It fails, because this isn't supported by the driver. Then layer
+ * 2 is assigned to plane 1 and the atomic test succeeds. We can go on and
+ * repeat the operation with plane 2. After exploring the whole tree, we end up
+ * with a valid allocation.
+ *
+ *
+ *                    layer 1                 layer 1
+ *                  +---------> failure     +---------> failure
+ *                  |                       |
+ *                  |                       |
+ *                  |                       |
+ *     +---------+  |          +---------+  |
+ *     |         |  | layer 2  |         |  | layer 3   final allocation:
+ *     | plane 1 +------------>+ plane 2 +--+---------> plane 1 → layer 2
+ *     |         |  |          |         |              plane 2 → layer 3
+ *     +---------+  |          +---------+
+ *                  |
+ *                  |
+ *                  | layer 3
+ *                  +---------> failure
+ *
+ *
+ * Note how layer 2 isn't considered for plane 2: it's already mapped to plane
+ * 1. Also note that branches are pruned as soon as an atomic test fails.
+ *
+ * In practice, the primary plane is treated separately. This is where layers
+ * that can't be mapped to any plane (e.g. layer 1 in our example) will be
+ * composited. The primary plane is the first that will be allocated. Then all
+ * other planes will be allocated, from the topmost one to the bottommost one.
+ *
+ * The "zpos" property (which defines ordering between layers/planes) is handled
+ * as a special case. If it's set on layers, it adds additional constraints on
+ * their relative ordering. If two layers intersect, their relative zpos needs
+ * to be preserved during plane allocation.
+ *
+ * Implementation-wise, the output_choose_layers function is called at each node
+ * of the tree. It iterates over layers, check constraints, performs an atomic
+ * test commit and calls itself recursively on the next plane.
+ */
+
 /* Global data for the allocation algorithm */
 struct plane_alloc {
 	drmModeAtomicReq *req;
@@ -420,7 +477,7 @@ bool output_choose_layers(struct liftoff_output *output,
 			    plane->zpos >= data->last_plane_zpos) {
 				/* This layer needs to be under the last
 				 * allocated one, but this plane isn't under the
-				 * last one. This  */
+				 * last one */
 				/* TODO: don't skip if they don't intersect? */
 				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 					"plane zpos invalid\n",
