@@ -416,10 +416,16 @@ static bool is_layer_allocated(struct plane_data *data,
 }
 
 static bool has_composited_layer_on_top(struct liftoff_output *output,
-					struct plane_data *data, uint64_t zpos)
+					struct plane_data *data,
+					struct liftoff_layer *layer)
 {
 	struct liftoff_layer *other_layer;
-	struct liftoff_layer_property *other_zpos_prop;
+	struct liftoff_layer_property *zpos_prop, *other_zpos_prop;
+
+	zpos_prop = layer_get_property(layer, "zpos");
+	if (zpos_prop == NULL) {
+		return false;
+	}
 
 	liftoff_list_for_each(other_layer, &output->layers, link) {
 		if (is_layer_allocated(data, other_layer)) {
@@ -431,7 +437,8 @@ static bool has_composited_layer_on_top(struct liftoff_output *output,
 			continue;
 		}
 
-		if (other_zpos_prop->value > zpos) {
+		if (layer_intersects(layer, other_layer) &&
+		    other_zpos_prop->value > zpos_prop->value) {
 			return true;
 		}
 	}
@@ -518,9 +525,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 
 		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
-		    zpos_prop != NULL &&
-		    has_composited_layer_on_top(output, data,
-						zpos_prop->value)) {
+		    has_composited_layer_on_top(output, data, layer)) {
 			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 				"has composited layer on top\n",
 				(void *)layer, plane->id);
