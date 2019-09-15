@@ -675,7 +675,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 				continue;
 			}
 
-			fprintf(stderr, "Assigning layer %p to plane %d\n",
+			fprintf(stderr, "Assigning layer %p to plane %"PRIu32"\n",
 				(void *)layer, plane->id);
 			if (!plane_apply(plane, layer, req, &compatible)) {
 				return false;
