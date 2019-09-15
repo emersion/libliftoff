@@ -55,9 +55,10 @@ static const size_t test_setup_len = sizeof(test_setup) / sizeof(test_setup[0]);
 #define CURSOR_PLANE &test_setup[1]
 #define OVERLAY_PLANE &test_setup[2]
 
-#define FIRST_3_PLANES { &test_setup[0], &test_setup[1], &test_setup[2] }
-#define FIRST_4_PLANES { &test_setup[0], &test_setup[1], &test_setup[2], \
-			 &test_setup[3] }
+/* non-primary planes */
+#define FIRST_2_SECONDARY_PLANES { &test_setup[1], &test_setup[2] }
+#define FIRST_3_SECONDARY_PLANES { &test_setup[1], &test_setup[2], \
+				   &test_setup[3] }
 
 static struct test_case tests[] = {
 	{
@@ -119,14 +120,14 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
-				.compat = FIRST_3_PLANES,
+				.compat = FIRST_2_SECONDARY_PLANES,
 				.result = OVERLAY_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
 				.zpos = 3,
-				.compat = FIRST_3_PLANES,
+				.compat = FIRST_2_SECONDARY_PLANES,
 				.result = CURSOR_PLANE,
 			},
 		},
@@ -154,7 +155,7 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
-				.compat = FIRST_3_PLANES,
+				.compat = FIRST_2_SECONDARY_PLANES,
 				.result = NULL,
 			},
 		},
@@ -270,21 +271,21 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 4,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = CURSOR_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = NULL,
 			},
 			{
 				.width = 100,
 				.height = 100,
 				.zpos = 3,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = &test_setup[3],
 			},
 		},
@@ -306,14 +307,14 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 4,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = CURSOR_PLANE,
 			},
 			{
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = &test_setup[3],
 			},
 			{
@@ -322,7 +323,7 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 3,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = OVERLAY_PLANE,
 			},
 		},
@@ -354,7 +355,7 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = NULL,
 			},
 			{
@@ -363,7 +364,7 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 3,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = NULL,
 			},
 		},
@@ -395,7 +396,7 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 3,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = CURSOR_PLANE,
 			},
 			{
@@ -404,7 +405,7 @@ static struct test_case tests[] = {
 				.width = 100,
 				.height = 100,
 				.zpos = 2,
-				.compat = FIRST_4_PLANES,
+				.compat = FIRST_3_SECONDARY_PLANES,
 				.result = NULL,
 			},
 		},
