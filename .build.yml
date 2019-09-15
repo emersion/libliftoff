@@ -1,0 +1,25 @@
+image: alpine/edge
+packages:
+  - gcc
+  - clang
+  - meson
+  - libdrm-dev
+sources:
+  - https://github.com/emersion/libliftoff
+tasks:
+  - setup: |
+      cd libliftoff
+      CC=gcc meson build-gcc/
+      CC=clang meson build-clang/
+  - build-gcc: |
+      cd libliftoff
+      ninja -C build-gcc/
+  - build-clang: |
+      cd libliftoff
+      ninja -C build-clang/
+  - test-gcc: |
+      cd libliftoff
+      ninja -C build-gcc/ test
+  - test-clang: |
+      cd libliftoff
+      ninja -C build-clang/ test
