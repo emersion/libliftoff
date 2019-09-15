@@ -441,6 +441,49 @@ static bool has_composited_layer_on_top(struct liftoff_output *output,
 	return false;
 }
 
+static bool has_allocated_layer_over(struct liftoff_output *output,
+				     struct plane_data *data,
+				     struct liftoff_layer *layer)
+{
+	ssize_t i;
+	struct liftoff_plane *other_plane;
+	struct liftoff_layer *other_layer;
+	struct liftoff_layer_property *zpos_prop, *other_zpos_prop;
+
+	zpos_prop = layer_get_property(layer, "zpos");
+	if (zpos_prop == NULL) {
+		return false;
+	}
+
+	i = -1;
+	liftoff_list_for_each(other_plane, &output->display->planes, link) {
+		i++;
+		if (i >= (ssize_t)data->plane_idx) {
+			break;
+		}
+		if (other_plane->type == DRM_PLANE_TYPE_PRIMARY) {
+			continue;
+		}
+
+		other_layer = data->alloc[i];
+		if (other_layer == NULL) {
+			continue;
+		}
+
+		other_zpos_prop = layer_get_property(other_layer, "zpos");
+		if (other_zpos_prop == NULL) {
+			continue;
+		}
+
+		if (zpos_prop->value > other_zpos_prop->value &&
+		    layer_intersects(layer, other_layer)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 static bool has_allocated_plane_under(struct liftoff_output *output,
 				      struct plane_data *data,
 				      struct liftoff_layer *layer)
@@ -528,10 +571,10 @@ bool output_choose_layers(struct liftoff_output *output,
 
 		zpos_prop = layer_get_property(layer, "zpos");
 		if (zpos_prop != NULL) {
-			if ((int)zpos_prop->value > data->last_layer_zpos) {
+			if ((int)zpos_prop->value > data->last_layer_zpos &&
+			    has_allocated_layer_over(output, data, layer)) {
 				/* This layer needs to be on top of the last
 				 * allocated one */
-				/* TODO: don't skip if they don't intersect? */
 				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
 					"layer zpos invalid\n",
 					(void *)layer, plane->id);
