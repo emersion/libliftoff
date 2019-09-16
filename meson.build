@@ -44,12 +44,6 @@ liftoff = declare_dependency(
 	dependencies: liftoff_deps,
 )
 
-executable(
-	'example',
-	files('example.c'),
-	dependencies: [liftoff],
-)
-
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
 	libraries: liftoff_lib,
@@ -59,4 +53,5 @@ pkgconfig.generate(
 	description: 'Hardware composer library',
 )
 
+subdir('example')
 subdir('test')
