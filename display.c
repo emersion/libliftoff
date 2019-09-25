@@ -233,6 +233,22 @@ static bool plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
 	return true;
 }
 
+static bool set_plane_prop_str(struct liftoff_plane *plane,
+			       drmModeAtomicReq *req, const char *name,
+			       uint64_t value)
+{
+	struct liftoff_plane_property *prop;
+
+	prop = plane_get_property(plane, name);
+	if (prop == NULL) {
+		fprintf(stderr, "plane %"PRIu32" is missing the %s property\n",
+			plane->id, name);
+		return false;
+	}
+
+	return plane_set_prop(plane, req, prop, value);
+}
+
 static bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 			drmModeAtomicReq *req, bool *compatible)
 {
@@ -245,22 +261,11 @@ static bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer
 	cursor = drmModeAtomicGetCursor(req);
 
 	if (layer == NULL) {
-		plane_prop = plane_get_property(plane, "FB_ID");
-		if (plane_prop == NULL) {
-			fprintf(stderr, "plane %"PRIu32" is missing the FB_ID "
-				"property\n", plane->id);
-			return false;
-		}
-		return plane_set_prop(plane, req, plane_prop, 0);
+		return set_plane_prop_str(plane, req, "FB_ID", 0) &&
+		       set_plane_prop_str(plane, req, "CRTC_ID", 0);
 	}
 
-	plane_prop = plane_get_property(plane, "CRTC_ID");
-	if (plane_prop == NULL) {
-		fprintf(stderr, "plane %"PRIu32" is missing the CRTC_ID "
-			"property\n", plane->id);
-		return false;
-	}
-	if (!plane_set_prop(plane, req, plane_prop, layer->output->crtc_id)) {
+	if (!set_plane_prop_str(plane, req, "CRTC_ID", layer->output->crtc_id)) {
 		return false;
 	}
 
