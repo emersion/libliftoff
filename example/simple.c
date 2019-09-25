@@ -40,6 +40,20 @@ static drmModeCrtc *pick_crtc(int drm_fd, drmModeRes *drm_res,
 	return drmModeGetCrtc(drm_fd, crtc_id);
 }
 
+static void disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res,
+				     uint32_t crtc_id)
+{
+	int i;
+
+	for (i = 0; i < drm_res->count_crtcs; i++) {
+		if (drm_res->crtcs[i] == crtc_id) {
+			continue;
+		}
+		drmModeSetCrtc(drm_fd, drm_res->crtcs[i],
+			0, 0, 0, NULL, 0, NULL);
+	}
+}
+
 static uint32_t create_argb_fb(int drm_fd, uint32_t width, uint32_t height,
 			       uint32_t color, bool with_alpha)
 {
@@ -165,6 +179,7 @@ int main(int argc, char *argv[])
 	drm_res = drmModeGetResources(drm_fd);
 	connector = pick_connector(drm_fd, drm_res);
 	crtc = pick_crtc(drm_fd, drm_res, connector);
+	disable_all_crtcs_except(drm_fd, drm_res, crtc->crtc_id);
 	output = liftoff_output_create(display, crtc->crtc_id);
 	drmModeFreeResources(drm_res);
 
