@@ -1,5 +1,5 @@
 executable(
 	'simple',
-	files('simple.c'),
+	files('common.c', 'simple.c'),
 	dependencies: [liftoff],
 )
