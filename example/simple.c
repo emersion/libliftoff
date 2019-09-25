@@ -9,6 +9,8 @@
 #include <xf86drmMode.h>
 #include "common.h"
 
+#define LAYERS_LEN 4
+
 /* ARGB 8:8:8:8 */
 static const uint32_t colors[] = {
 	0xFFFF0000, /* red */
@@ -21,8 +23,10 @@ static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output
 				       int x, int y, int width, int height,
 				       bool with_alpha)
 {
+	static bool first = true;
 	static size_t color_idx = 0;
 	struct dumb_fb fb = {0};
+	uint32_t color;
 	struct liftoff_layer *layer;
 
 	uint32_t format = with_alpha ? DRM_FORMAT_ARGB8888 : DRM_FORMAT_XRGB8888;
@@ -32,8 +36,15 @@ static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output
 	}
 	printf("Created FB %d with size %dx%d\n", fb.id, width, height);
 
-	dumb_fb_fill(&fb, drm_fd, colors[color_idx]);
-	color_idx = (color_idx + 1) % (sizeof(colors) / sizeof(colors[0]));
+	if (first) {
+		color = 0xFFFFFFFF;
+		first = false;
+	} else {
+		color = colors[color_idx];
+		color_idx = (color_idx + 1) % (sizeof(colors) / sizeof(colors[0]));
+	}
+
+	dumb_fb_fill(&fb, drm_fd, color);
 
 	layer = liftoff_layer_create(output);
 	liftoff_layer_set_property(layer, "FB_ID", fb.id);
@@ -57,7 +68,7 @@ int main(int argc, char *argv[])
 	drmModeCrtc *crtc;
 	drmModeConnector *connector;
 	struct liftoff_output *output;
-	struct liftoff_layer *layers[4];
+	struct liftoff_layer *layers[LAYERS_LEN];
 	drmModeAtomicReq *req;
 	int ret;
 	size_t i;
@@ -104,14 +115,14 @@ int main(int argc, char *argv[])
 
 	layers[0] = add_layer(drm_fd, output, 0, 0, crtc->mode.hdisplay,
 			      crtc->mode.vdisplay, false);
-	layers[1] = add_layer(drm_fd, output, 50, 50, 256, 256, true);
-	layers[2] = add_layer(drm_fd, output, 300, 300, 128, 128, false);
-	layers[3] = add_layer(drm_fd, output, 400, 400, 128, 128, true);
+	for (i = 1; i < LAYERS_LEN; i++) {
+		layers[i] = add_layer(drm_fd, output, 100 * i, 100 * i,
+				      256, 256, i % 2);
+	}
 
-	liftoff_layer_set_property(layers[0], "zpos", 0);
-	liftoff_layer_set_property(layers[1], "zpos", 1);
-	liftoff_layer_set_property(layers[2], "zpos", 2);
-	liftoff_layer_set_property(layers[3], "zpos", 3);
+	for (i = 0; i < LAYERS_LEN; i++) {
+		liftoff_layer_set_property(layers[i], "zpos", i);
+	}
 
 	req = drmModeAtomicAlloc();
 	if (!liftoff_display_apply(display, req)) {
