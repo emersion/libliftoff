@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <drm_fourcc.h>
 #include <stddef.h>
 #include <sys/mman.h>
@@ -47,13 +48,13 @@ void disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res, uint32_t crtc_id)
 	}
 }
 
-uint32_t create_argb_fb(int drm_fd, uint32_t width, uint32_t height,
-			uint32_t color, bool with_alpha)
+bool dumb_fb_init(struct dumb_fb *fb, int drm_fd, uint32_t format,
+		  uint32_t width, uint32_t height)
 {
 	int ret;
 	uint32_t fb_id;
-	uint32_t *data;
-	size_t i;
+
+	assert(format == DRM_FORMAT_ARGB8888 || format == DRM_FORMAT_XRGB8888);
 
 	struct drm_mode_create_dumb create = {
 		.width = width,
@@ -63,36 +64,54 @@ uint32_t create_argb_fb(int drm_fd, uint32_t width, uint32_t height,
 	};
 	ret = drmIoctl(drm_fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
 	if (ret < 0) {
-		return 0;
+		return false;
 	}
 
-	uint32_t fmt = with_alpha ? DRM_FORMAT_ARGB8888 : DRM_FORMAT_XRGB8888;
 	uint32_t handles[4] = { create.handle };
 	uint32_t strides[4] = { create.pitch };
 	uint32_t offsets[4] = { 0 };
-	ret = drmModeAddFB2(drm_fd, width, height, fmt, handles, strides,
+	ret = drmModeAddFB2(drm_fd, width, height, format, handles, strides,
 			    offsets, &fb_id, 0);
 	if (ret < 0) {
-		return 0;
+		return false;
 	}
 
-	struct drm_mode_map_dumb map = { .handle = create.handle };
+	fb->width = width;
+	fb->height = height;
+	fb->stride = create.pitch;
+	fb->size = create.size;
+	fb->handle = create.handle;
+	fb->id = fb_id;
+	return true;
+}
+
+void *dumb_fb_map(struct dumb_fb *fb, int drm_fd)
+{
+	int ret;
+
+	struct drm_mode_map_dumb map = { .handle = fb->handle };
 	ret = drmIoctl(drm_fd, DRM_IOCTL_MODE_MAP_DUMB, &map);
 	if (ret < 0) {
-		return 0;
+		return MAP_FAILED;
 	}
 
-	data = mmap(0, create.size, PROT_READ | PROT_WRITE, MAP_SHARED, drm_fd,
+	return mmap(0, fb->size, PROT_READ | PROT_WRITE, MAP_SHARED, drm_fd,
 		    map.offset);
+}
+
+void dumb_fb_fill(struct dumb_fb *fb, int drm_fd, uint32_t color)
+{
+	uint32_t *data;
+	size_t i;
+
+	data = dumb_fb_map(fb, drm_fd);
 	if (data == MAP_FAILED) {
-		return 0;
+		return;
 	}
 
-	for (i = 0; i < create.size / sizeof(uint32_t); i++) {
+	for (i = 0; i < fb->size / sizeof(uint32_t); i++) {
 		data[i] = color;
 	}
 
-	munmap(data, create.size);
-	return fb_id;
+	munmap(data, fb->size);
 }
-

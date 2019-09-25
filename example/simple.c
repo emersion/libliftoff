@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#include <drm_fourcc.h>
 #include <fcntl.h>
 #include <libliftoff.h>
 #include <stdio.h>
@@ -21,20 +22,21 @@ static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output
 				       bool with_alpha)
 {
 	static size_t color_idx = 0;
-	uint32_t fb_id;
+	struct dumb_fb fb = {0};
 	struct liftoff_layer *layer;
 
-	fb_id = create_argb_fb(drm_fd, width, height, colors[color_idx],
-			       with_alpha);
-	if (fb_id == 0) {
+	uint32_t format = with_alpha ? DRM_FORMAT_ARGB8888 : DRM_FORMAT_XRGB8888;
+	if (!dumb_fb_init(&fb, drm_fd, format, width, height)) {
 		fprintf(stderr, "failed to create framebuffer\n");
 		return NULL;
 	}
-	printf("Created FB %d with size %dx%d\n", fb_id, width, height);
+	printf("Created FB %d with size %dx%d\n", fb.id, width, height);
+
+	dumb_fb_fill(&fb, drm_fd, colors[color_idx]);
 	color_idx = (color_idx + 1) % (sizeof(colors) / sizeof(colors[0]));
 
 	layer = liftoff_layer_create(output);
-	liftoff_layer_set_property(layer, "FB_ID", fb_id);
+	liftoff_layer_set_property(layer, "FB_ID", fb.id);
 	liftoff_layer_set_property(layer, "CRTC_X", x);
 	liftoff_layer_set_property(layer, "CRTC_Y", y);
 	liftoff_layer_set_property(layer, "CRTC_W", width);
