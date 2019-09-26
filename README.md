@@ -22,6 +22,7 @@ struct liftoff_display *display;
 struct liftoff_output *output;
 struct liftoff_layer *layer;
 drmModeAtomicReq *req;
+int ret;
 
 display = liftoff_display_create(drm_fd);
 output = liftoff_output_create(display, crtc_id);
