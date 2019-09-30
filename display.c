@@ -360,6 +360,10 @@ struct alloc_result {
 
 	struct liftoff_layer **best;
 	int best_score;
+
+	/* per-output */
+	bool has_composition_layer;
+	size_t non_composition_layers_len;
 };
 
 /* Transient data, arguments for each step */
@@ -368,8 +372,10 @@ struct alloc_step {
 	size_t plane_idx;
 
 	struct liftoff_layer **alloc; /* only items up to plane_idx are valid */
-	int score;
+	int score; /* number of allocated layers */
 	int last_layer_zpos;
+
+	bool composited; /* per-output */
 };
 
 static void plane_step_init_next(struct alloc_step *step,
@@ -386,7 +392,14 @@ static void plane_step_init_next(struct alloc_step *step,
 	step->alloc = prev->alloc;
 	step->alloc[prev->plane_idx] = layer;
 
-	if (layer != NULL) {
+	if (layer != NULL && layer == layer->output->composition_layer) {
+		assert(!prev->composited);
+		step->composited = true;
+	} else {
+		step->composited = prev->composited;
+	}
+
+	if (layer != NULL && layer != layer->output->composition_layer) {
 		step->score = prev->score + 1;
 	} else {
 		step->score = prev->score;
@@ -541,8 +554,35 @@ bool output_choose_layers(struct liftoff_output *output,
 	display = output->display;
 
 	if (step->plane_link == &display->planes) { /* Allocation finished */
+		/* If composition isn't used, we need to have allocated all
+		 * layers. */
+		/* TODO: find a way to fail earlier, e.g. when the number of
+		 * layers exceeds the number of planes. */
+		if (result->has_composition_layer && !step->composited &&
+		    step->score != (int)result->non_composition_layers_len) {
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Cannot skip composition: some layers "
+				    "are missing a plane");
+			return true;
+		}
+		/* On the other hand, if we manage to allocate all layers, we
+		 * don't want to use composition. We don't want to use the
+		 * composition layer at all. */
+		if (step->composited &&
+		    step->score == (int)result->non_composition_layers_len) {
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Refusing to use composition: all layers "
+				    "have been put in a plane");
+			return true;
+		}
+
+		/* TODO: check allocation isn't empty */
+
 		if (step->score > result->best_score) {
 			/* We found a better allocation */
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Found a better allocation with score=%d",
+				    step->score);
 			result->best_score = step->score;
 			memcpy(result->best, step->alloc,
 			       result->planes_len * sizeof(struct liftoff_layer *));
@@ -613,6 +653,16 @@ bool output_choose_layers(struct liftoff_output *output,
 			liftoff_log(LIFTOFF_DEBUG,
 				    "Layer %p -> plane %"PRIu32": "
 				    "has composited layer on top",
+				    (void *)layer, plane->id);
+			continue;
+		}
+
+		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
+		    layer == layer->output->composition_layer) {
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Layer %p -> plane %"PRIu32": "
+				    "cannot put composition layer on "
+				    "non-primary plane",
 				    (void *)layer, plane->id);
 			continue;
 		}
@@ -715,12 +765,19 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 		 * some drivers want user-space to enable the primary plane
 		 * before any other plane. */
 
-		result.best_score = 0;
+		result.best_score = -1;
 		memset(result.best, 0, result.planes_len * sizeof(*result.best));
+		result.has_composition_layer = output->composition_layer != NULL;
+		result.non_composition_layers_len =
+			liftoff_list_length(&output->layers);
+		if (output->composition_layer != NULL) {
+			result.non_composition_layers_len--;
+		}
 		step.plane_link = display->planes.next;
 		step.plane_idx = 0;
 		step.score = 0;
 		step.last_layer_zpos = INT_MAX;
+		step.composited = false;
 		if (!output_choose_layers(output, &result, &step)) {
 			return false;
 		}

@@ -32,6 +32,14 @@ bool liftoff_display_apply(struct liftoff_display *display,
 struct liftoff_output *liftoff_output_create(struct liftoff_display *display,
 					     uint32_t crtc_id);
 void liftoff_output_destroy(struct liftoff_output *output);
+/**
+ * Indicate on which layer composition can take place. Users should be able to
+ * blend layers that haven't been mapped to a plane to this layer. The
+ * composition layer won't be used if all other layers have been mapped to a
+ * plane. There is at most one composition layer per output.
+ */
+void liftoff_output_set_composition_layer(struct liftoff_output *output,
+					  struct liftoff_layer *layer);
 
 /**
  * Create a new layer on an output.

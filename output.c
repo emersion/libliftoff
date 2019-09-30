@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -37,4 +38,11 @@ void liftoff_output_destroy(struct liftoff_output *output)
 {
 	liftoff_list_remove(&output->link);
 	free(output);
+}
+
+void liftoff_output_set_composition_layer(struct liftoff_output *output,
+					  struct liftoff_layer *layer)
+{
+	assert(layer->output == output);
+	output->composition_layer = layer;
 }

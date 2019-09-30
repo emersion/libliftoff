@@ -21,6 +21,8 @@ struct liftoff_output {
 	size_t crtc_index;
 	struct liftoff_list link; /* liftoff_display.outputs */
 
+	struct liftoff_layer *composition_layer;
+
 	struct liftoff_list layers; /* liftoff_layer.link */
 };
 

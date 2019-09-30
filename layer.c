@@ -18,6 +18,9 @@ struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output)
 
 void liftoff_layer_destroy(struct liftoff_layer *layer)
 {
+	if (layer->output->composition_layer == layer) {
+		layer->output->composition_layer = NULL;
+	}
 	free(layer->props);
 	liftoff_list_remove(&layer->link);
 	free(layer);
