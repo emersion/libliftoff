@@ -6,6 +6,10 @@
 #include <stddef.h>
 #include <xf86drmMode.h>
 
+struct liftoff_display;
+struct liftoff_output;
+struct liftoff_layer;
+
 /**
  * Initialize libliftoff for a DRM node. The node is expected to have
  * DRM_CLIENT_CAP_UNIVERSAL_PLANES and DRM_CLIENT_CAP_ATOMIC enabled.
