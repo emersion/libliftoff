@@ -23,9 +23,9 @@ static const uint32_t colors[] = {
 
 static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output,
 				       int x, int y, int width, int height,
-				       bool with_alpha, struct dumb_fb *fb)
+				       bool with_alpha, bool white,
+				       struct dumb_fb *fb)
 {
-	static bool first = true;
 	static size_t color_idx = 0;
 	uint32_t color;
 	struct liftoff_layer *layer;
@@ -37,9 +37,8 @@ static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output
 	}
 	printf("Created FB %d with size %dx%d\n", fb->id, width, height);
 
-	if (first) {
+	if (white) {
 		color = 0xFFFFFFFF;
-		first = false;
 	} else {
 		color = colors[color_idx];
 		color_idx = (color_idx + 1) % (sizeof(colors) / sizeof(colors[0]));
@@ -92,6 +91,8 @@ int main(int argc, char *argv[])
 	drmModeCrtc *crtc;
 	drmModeConnector *connector;
 	struct liftoff_output *output;
+	struct dumb_fb composition_fb = {0};
+	struct liftoff_layer *composition_layer;
 	struct dumb_fb fbs[MAX_LAYERS_LEN] = {0};
 	struct liftoff_layer *layers[MAX_LAYERS_LEN];
 	drmModeAtomicReq *req;
@@ -112,6 +113,10 @@ int main(int argc, char *argv[])
 				argv[0]);
 			return opt == 'h' ? 0 : 1;
 		}
+	}
+	if (layers_len <= 0 || layers_len > MAX_LAYERS_LEN) {
+		fprintf(stderr, "invalid -l value\n");
+		return 1;
 	}
 
 	drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
@@ -154,16 +159,22 @@ int main(int argc, char *argv[])
 	printf("Using connector %d, CRTC %d\n", connector->connector_id,
 	       crtc->crtc_id);
 
+	composition_layer = add_layer(drm_fd, output, 0, 0, crtc->mode.hdisplay,
+				      crtc->mode.vdisplay, false, true,
+				      &composition_fb);
 	layers[0] = add_layer(drm_fd, output, 0, 0, crtc->mode.hdisplay,
-			      crtc->mode.vdisplay, false, &fbs[0]);
+			      crtc->mode.vdisplay, false, true, &fbs[0]);
 	for (i = 1; i < layers_len; i++) {
 		layers[i] = add_layer(drm_fd, output, 100 * i, 100 * i,
-				      256, 256, i % 2, &fbs[i]);
+				      256, 256, i % 2, false, &fbs[i]);
 	}
 
+	liftoff_layer_set_property(composition_layer, "zpos", 0);
 	for (i = 0; i < layers_len; i++) {
 		liftoff_layer_set_property(layers[i], "zpos", i);
 	}
+
+	liftoff_output_set_composition_layer(output, composition_layer);
 
 	req = drmModeAtomicAlloc();
 	if (!liftoff_display_apply(display, req)) {
@@ -174,7 +185,8 @@ int main(int argc, char *argv[])
 	/* Composite layers that didn't make it into a plane */
 	for (i = 1; i < layers_len; i++) {
 		if (liftoff_layer_get_plane_id(layers[i]) == 0) {
-			composite(drm_fd, &fbs[0], &fbs[i], i * 100, i * 100);
+			composite(drm_fd, &composition_fb, &fbs[i],
+				  i * 100, i * 100);
 		}
 	}
 
@@ -184,6 +196,8 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
+	printf("Composition layer got assigned to plane %u\n",
+	       liftoff_layer_get_plane_id(composition_layer));
 	for (i = 0; i < layers_len; i++) {
 		printf("Layer %zu got assigned to plane %u\n", i,
 		       liftoff_layer_get_plane_id(layers[i]));
@@ -192,6 +206,7 @@ int main(int argc, char *argv[])
 	sleep(1);
 
 	drmModeAtomicFree(req);
+	liftoff_layer_destroy(composition_layer);
 	for (i = 0; i < layers_len; i++) {
 		liftoff_layer_destroy(layers[i]);
 	}
