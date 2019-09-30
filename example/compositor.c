@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <libliftoff.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -10,7 +11,7 @@
 #include <xf86drmMode.h>
 #include "common.h"
 
-#define LAYERS_LEN 6
+#define MAX_LAYERS_LEN 16
 
 /* ARGB 8:8:8:8 */
 static const uint32_t colors[] = {
@@ -83,17 +84,35 @@ static void composite(int drm_fd, struct dumb_fb *dst_fb, struct dumb_fb *src_fb
 
 int main(int argc, char *argv[])
 {
+	int opt;
+	size_t layers_len;
 	int drm_fd;
 	struct liftoff_display *display;
 	drmModeRes *drm_res;
 	drmModeCrtc *crtc;
 	drmModeConnector *connector;
 	struct liftoff_output *output;
-	struct dumb_fb fbs[LAYERS_LEN] = {0};
-	struct liftoff_layer *layers[LAYERS_LEN];
+	struct dumb_fb fbs[MAX_LAYERS_LEN] = {0};
+	struct liftoff_layer *layers[MAX_LAYERS_LEN];
 	drmModeAtomicReq *req;
 	int ret;
 	size_t i;
+
+	layers_len = 6;
+	while ((opt = getopt(argc, argv, "l:h")) != -1) {
+		switch (opt) {
+		case 'l':
+			layers_len = atoi(optarg);
+			break;
+		default:
+			fprintf(stderr,
+				"usage: %s [options...]\n"
+				"  -h        Display help message\n"
+				"  -l <num>  Number of layers (default: 6)\n",
+				argv[0]);
+			return opt == 'h' ? 0 : 1;
+		}
+	}
 
 	drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
 	if (drm_fd < 0) {
@@ -137,12 +156,12 @@ int main(int argc, char *argv[])
 
 	layers[0] = add_layer(drm_fd, output, 0, 0, crtc->mode.hdisplay,
 			      crtc->mode.vdisplay, false, &fbs[0]);
-	for (i = 1; i < LAYERS_LEN; i++) {
+	for (i = 1; i < layers_len; i++) {
 		layers[i] = add_layer(drm_fd, output, 100 * i, 100 * i,
 				      256, 256, i % 2, &fbs[i]);
 	}
 
-	for (i = 0; i < LAYERS_LEN; i++) {
+	for (i = 0; i < layers_len; i++) {
 		liftoff_layer_set_property(layers[i], "zpos", i);
 	}
 
@@ -153,7 +172,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Composite layers that didn't make it into a plane */
-	for (i = 1; i < LAYERS_LEN; i++) {
+	for (i = 1; i < layers_len; i++) {
 		if (liftoff_layer_get_plane_id(layers[i]) == 0) {
 			composite(drm_fd, &fbs[0], &fbs[i], i * 100, i * 100);
 		}
@@ -165,7 +184,7 @@ int main(int argc, char *argv[])
 		return false;
 	}
 
-	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
+	for (i = 0; i < layers_len; i++) {
 		printf("Layer %zu got assigned to plane %u\n", i,
 		       liftoff_layer_get_plane_id(layers[i]));
 	}
@@ -173,7 +192,7 @@ int main(int argc, char *argv[])
 	sleep(1);
 
 	drmModeAtomicFree(req);
-	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
+	for (i = 0; i < layers_len; i++) {
 		liftoff_layer_destroy(layers[i]);
 	}
 	liftoff_output_destroy(output);
