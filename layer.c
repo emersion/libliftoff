@@ -44,7 +44,8 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 
 	/* TODO: better error handling */
 	if (strcmp(name, "CRTC_ID") == 0) {
-		fprintf(stderr, "refusing to set a layer's CRTC_ID\n");
+		liftoff_log(LIFTOFF_ERROR,
+			    "refusing to set a layer's CRTC_ID");
 		return;
 	}
 

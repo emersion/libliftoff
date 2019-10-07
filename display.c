@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "log.h"
 #include "private.h"
 
 static int guess_plane_zpos_from_type(struct liftoff_display *display,
@@ -96,9 +97,9 @@ static struct liftoff_plane *plane_create(struct liftoff_display *display,
 	drmModeFreeObjectProperties(drm_props);
 
 	if (!has_type) {
-		fprintf(stderr,
-			"plane %"PRIu32" is missing the 'type' property\n",
-			plane->id);
+		liftoff_log(LIFTOFF_ERROR,
+			    "plane %"PRIu32" is missing the 'type' property",
+			    plane->id);
 		free(plane);
 		return NULL;
 	} else if (!has_zpos) {
@@ -223,7 +224,8 @@ static bool plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
 {
 	int ret;
 
-	fprintf(stderr, "  Setting %s = %"PRIu64"\n", prop->name, value);
+	liftoff_log(LIFTOFF_DEBUG, "  Setting %s = %"PRIu64,
+		    prop->name, value);
 	ret = drmModeAtomicAddProperty(req, plane->id, prop->id, value);
 	if (ret < 0) {
 		perror("drmModeAtomicAddProperty");
@@ -241,8 +243,9 @@ static bool set_plane_prop_str(struct liftoff_plane *plane,
 
 	prop = plane_get_property(plane, name);
 	if (prop == NULL) {
-		fprintf(stderr, "plane %"PRIu32" is missing the %s property\n",
-			plane->id, name);
+		liftoff_log(LIFTOFF_DEBUG,
+			    "plane %"PRIu32" is missing the %s property",
+			    plane->id, name);
 		return false;
 	}
 
@@ -564,8 +567,9 @@ bool output_choose_layers(struct liftoff_output *output,
 		goto skip;
 	}
 
-	fprintf(stderr, "Performing allocation for plane %"PRIu32" (%zu/%zu)\n",
-		plane->id, step->plane_idx + 1, result->planes_len);
+	liftoff_log(LIFTOFF_DEBUG,
+		    "Performing allocation for plane %"PRIu32" (%zu/%zu)",
+		    plane->id, step->plane_idx + 1, result->planes_len);
 
 	liftoff_list_for_each(layer, &output->layers, link) {
 		if (layer->plane != NULL) {
@@ -583,9 +587,10 @@ bool output_choose_layers(struct liftoff_output *output,
 			    has_allocated_layer_over(output, step, layer)) {
 				/* This layer needs to be on top of the last
 				 * allocated one */
-				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
-					"layer zpos invalid\n",
-					(void *)layer, plane->id);
+				liftoff_log(LIFTOFF_DEBUG,
+					    "Layer %p -> plane %"PRIu32": "
+					    "layer zpos invalid",
+					    (void *)layer, plane->id);
 				continue;
 			}
 			if ((int)zpos_prop->value < step->last_layer_zpos &&
@@ -595,39 +600,44 @@ bool output_choose_layers(struct liftoff_output *output,
 				 * last one (in practice, since planes are
 				 * sorted by zpos it means it has the same zpos,
 				 * ie. undefined ordering). */
-				fprintf(stderr, "Layer %p -> plane %"PRIu32": "
-					"plane zpos invalid\n",
-					(void *)layer, plane->id);
+				liftoff_log(LIFTOFF_DEBUG,
+					    "Layer %p -> plane %"PRIu32": "
+					    "plane zpos invalid",
+					    (void *)layer, plane->id);
 				continue;
 			}
 		}
 
 		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
 		    has_composited_layer_over(output, step, layer)) {
-			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
-				"has composited layer on top\n",
-				(void *)layer, plane->id);
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Layer %p -> plane %"PRIu32": "
+				    "has composited layer on top",
+				    (void *)layer, plane->id);
 			continue;
 		}
 
 		/* Try to use this layer for the current plane */
-		fprintf(stderr, "Layer %p -> plane %"PRIu32": "
-			"applying properties...\n", (void *)layer, plane->id);
+		liftoff_log(LIFTOFF_DEBUG, "Layer %p -> plane %"PRIu32": "
+			    "applying properties...",
+			    (void *)layer, plane->id);
 		if (!plane_apply(plane, layer, result->req, &compatible)) {
 			return false;
 		}
 		if (!compatible) {
-			fprintf(stderr, "Layer %p -> plane %"PRIu32": "
-				"incompatible properties\n",
-				(void *)layer, plane->id);
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Layer %p -> plane %"PRIu32": "
+				    "incompatible properties",
+				    (void *)layer, plane->id);
 			continue;
 		}
 
 		ret = drmModeAtomicCommit(display->drm_fd, result->req,
 					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
 		if (ret == 0) {
-			fprintf(stderr, "Layer %p -> plane %"PRIu32": success\n",
-				(void *)layer, plane->id);
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Layer %p -> plane %"PRIu32": success",
+				    (void *)layer, plane->id);
 			/* Continue with the next plane */
 			plane_step_init_next(&next_step, step, layer);
 			if (!output_choose_layers(output, result, &next_step)) {
@@ -675,7 +685,8 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	   to hit bandwidth limits because too many planes are enabled. */
 	liftoff_list_for_each(plane, &display->planes, link) {
 		if (plane->layer == NULL) {
-			fprintf(stderr, "Disabling plane %d\n", plane->id);
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Disabling plane %d", plane->id);
 			if (!plane_apply(plane, NULL, req, &compatible)) {
 				return false;
 			}
@@ -714,8 +725,9 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 			return false;
 		}
 
-		fprintf(stderr, "Found plane allocation for output %p "
-			"with score=%d\n", (void *)output, result.best_score);
+		liftoff_log(LIFTOFF_DEBUG,
+			    "Found plane allocation for output %p with "
+			    "score=%d", (void *)output, result.best_score);
 
 		/* Apply the best allocation */
 		i = 0;
@@ -726,8 +738,9 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 				continue;
 			}
 
-			fprintf(stderr, "Assigning layer %p to plane %"PRIu32"\n",
-				(void *)layer, plane->id);
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Assigning layer %p to plane %"PRIu32,
+				    (void *)layer, plane->id);
 			if (!plane_apply(plane, layer, req, &compatible)) {
 				return false;
 			}

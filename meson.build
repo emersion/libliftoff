@@ -30,6 +30,7 @@ liftoff_lib = library(
 		'display.c',
 		'layer.c',
 		'list.c',
+		'log.c',
 		'output.c',
 	),
 	include_directories: liftoff_inc,

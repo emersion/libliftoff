@@ -1,6 +1,7 @@
 #ifndef LIFTOFF_H
 #define LIFTOFF_H
 
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -48,5 +49,17 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
  * mapped.
  */
 uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer);
+
+enum liftoff_log_importance {
+	LIFTOFF_SILENT,
+	LIFTOFF_DEBUG,
+	LIFTOFF_ERROR,
+};
+
+typedef void (*liftoff_log_func)(enum liftoff_log_importance importance,
+				 const char *fmt, va_list args);
+
+void liftoff_log_init(enum liftoff_log_importance verbosity,
+		      liftoff_log_func callback);
 
 #endif

@@ -1,8 +1,9 @@
 #ifndef PRIVATE_H
 #define PRIVATE_H
 
-#include "libliftoff.h"
+#include <libliftoff.h>
 #include "list.h"
+#include "log.h"
 
 struct liftoff_display {
 	int drm_fd;
