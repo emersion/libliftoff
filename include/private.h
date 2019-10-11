@@ -70,4 +70,7 @@ struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
 bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
 
+struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id);
+void plane_destroy(struct liftoff_plane *plane);
+
 #endif
