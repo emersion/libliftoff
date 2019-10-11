@@ -39,6 +39,7 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 	drmModePropertyRes *drm_prop;
 	struct liftoff_plane_property *prop;
 	uint64_t value;
+	ssize_t basic_prop_idx;
 	bool has_type = false, has_zpos = false;
 
 	plane = calloc(1, sizeof(*plane));
@@ -82,6 +83,11 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 		prop->id = drm_prop->prop_id;
 		drmModeFreeProperty(drm_prop);
 		plane->props_len++;
+
+		basic_prop_idx = basic_property_index(prop->name);
+		if (basic_prop_idx >= 0) {
+			plane->basic_props[basic_prop_idx] = prop;
+		}
 
 		value = drm_props->prop_values[i];
 		if (strcmp(prop->name, "type") == 0) {

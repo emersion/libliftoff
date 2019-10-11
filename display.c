@@ -4,6 +4,26 @@
 #include "log.h"
 #include "private.h"
 
+ssize_t basic_property_index(const char *name)
+{
+	if (strcmp(name, "FB_ID") == 0) {
+		return LIFTOFF_PROP_FB_ID;
+	} else if (strcmp(name, "CRTC_ID") == 0) {
+		return LIFTOFF_PROP_CRTC_ID;
+	} else if (strcmp(name, "CRTC_X") == 0) {
+		return LIFTOFF_PROP_CRTC_X;
+	} else if (strcmp(name, "CRTC_Y") == 0) {
+		return LIFTOFF_PROP_CRTC_Y;
+	} else if (strcmp(name, "CRTC_W") == 0) {
+		return LIFTOFF_PROP_CRTC_W;
+	} else if (strcmp(name, "CRTC_H") == 0) {
+		return LIFTOFF_PROP_CRTC_H;
+	} else if (strcmp(name, "zpos") == 0) {
+		return LIFTOFF_PROP_ZPOS;
+	}
+	return -1;
+}
+
 struct liftoff_display *liftoff_display_create(int drm_fd)
 {
 	struct liftoff_display *display;

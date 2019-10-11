@@ -2,8 +2,20 @@
 #define PRIVATE_H
 
 #include <libliftoff.h>
+#include <sys/types.h>
 #include "list.h"
 #include "log.h"
+
+enum liftoff_basic_property {
+	LIFTOFF_PROP_FB_ID,
+	LIFTOFF_PROP_CRTC_ID,
+	LIFTOFF_PROP_CRTC_X,
+	LIFTOFF_PROP_CRTC_Y,
+	LIFTOFF_PROP_CRTC_W,
+	LIFTOFF_PROP_CRTC_H,
+	LIFTOFF_PROP_ZPOS,
+	LIFTOFF_PROP_LAST, /* keep last */
+};
 
 struct liftoff_display {
 	int drm_fd;
@@ -32,6 +44,7 @@ struct liftoff_layer {
 
 	struct liftoff_layer_property *props;
 	size_t props_len;
+	struct liftoff_layer_property *basic_props[LIFTOFF_PROP_LAST];
 
 	struct liftoff_plane *plane;
 };
@@ -52,6 +65,7 @@ struct liftoff_plane {
 
 	struct liftoff_plane_property *props;
 	size_t props_len;
+	struct liftoff_plane_property *basic_props[LIFTOFF_PROP_LAST];
 
 	struct liftoff_layer *layer;
 };
@@ -66,8 +80,10 @@ struct liftoff_rect {
 	int width, height;
 };
 
+ssize_t basic_property_index(const char *name);
+
 struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
-						  const char *name);
+						  enum liftoff_basic_property prop);
 void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
 bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
 void layer_mark_clean(struct liftoff_layer *layer);

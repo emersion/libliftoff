@@ -27,16 +27,23 @@ void liftoff_layer_destroy(struct liftoff_layer *layer)
 }
 
 struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
-						  const char *name)
+						  enum liftoff_basic_property prop)
+{
+	return layer->basic_props[prop];
+}
+
+static void layer_invalidate_basic_props(struct liftoff_layer *layer)
 {
 	size_t i;
+	ssize_t basic_prop_idx;
 
+	memset(layer->basic_props, 0, sizeof(layer->basic_props));
 	for (i = 0; i < layer->props_len; i++) {
-		if (strcmp(layer->props[i].name, name) == 0) {
-			return &layer->props[i];
+		basic_prop_idx = basic_property_index(layer->props[i].name);
+		if (basic_prop_idx >= 0) {
+			layer->basic_props[basic_prop_idx] = &layer->props[i];
 		}
 	}
-	return NULL;
 }
 
 void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
@@ -44,6 +51,8 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 {
 	struct liftoff_layer_property *props;
 	struct liftoff_layer_property *prop;
+	ssize_t basic_prop_idx;
+	size_t i;
 
 	/* TODO: better error handling */
 	if (strcmp(name, "CRTC_ID") == 0) {
@@ -52,7 +61,19 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 		return;
 	}
 
-	prop = layer_get_property(layer, name);
+	basic_prop_idx = basic_property_index(name);
+	if (basic_prop_idx >= 0) {
+		prop = layer_get_property(layer, basic_prop_idx);
+	} else {
+		prop = NULL;
+		for (i = 0; i < layer->props_len; i++) {
+			if (strcmp(layer->props[i].name, name) == 0) {
+				prop = &layer->props[i];
+				break;
+			}
+		}
+	}
+
 	if (prop == NULL) {
 		props = realloc(layer->props, (layer->props_len + 1)
 				* sizeof(struct liftoff_layer_property));
@@ -60,12 +81,21 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 			liftoff_log_errno(LIFTOFF_ERROR, "realloc");
 			return;
 		}
-		layer->props = props;
-		layer->props_len++;
+		if (layer->props != props) {
+			layer->props = props;
+			layer_invalidate_basic_props(layer);
+		} else {
+			layer->props = props;
+		}
 
-		prop = &layer->props[layer->props_len - 1];
+		prop = &layer->props[layer->props_len];
 		memset(prop, 0, sizeof(*prop));
 		strncpy(prop->name, name, sizeof(prop->name) - 1);
+		layer->props_len++;
+
+		if (basic_prop_idx >= 0) {
+			layer->basic_props[basic_prop_idx] = prop;
+		}
 
 		prop->changed = true;
 	} else {
@@ -87,10 +117,10 @@ void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)
 {
 	struct liftoff_layer_property *x_prop, *y_prop, *w_prop, *h_prop;
 
-	x_prop = layer_get_property(layer, "CRTC_X");
-	y_prop = layer_get_property(layer, "CRTC_Y");
-	w_prop = layer_get_property(layer, "CRTC_W");
-	h_prop = layer_get_property(layer, "CRTC_H");
+	x_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_X);
+	y_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_Y);
+	w_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_W);
+	h_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_H);
 
 	rect->x = x_prop != NULL ? x_prop->value : 0;
 	rect->y = y_prop != NULL ? y_prop->value : 0;
