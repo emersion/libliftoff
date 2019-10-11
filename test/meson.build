@@ -36,6 +36,9 @@ alloc_tests = [
 	'zpos-4x-disjoint-alt',
 	'zpos-4x-domino-fail',
 	'zpos-4x-domino-partial',
+	'composition-3x',
+	'composition-3x-fail',
+	'composition-3x-partial',
 ]
 
 foreach name : alloc_tests

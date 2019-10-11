@@ -33,6 +33,7 @@ struct test_plane {
 struct test_layer {
 	int x, y, width, height;
 	int zpos; /* zero means unset */
+	bool composition;
 	struct test_plane *compat[64];
 	struct test_plane *result;
 };
@@ -447,6 +448,108 @@ static struct test_case tests[] = {
 			},
 		},
 	},
+	{
+		.name = "composition-3x",
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.composition = true,
+				.compat = { PRIMARY_PLANE },
+				.result = NULL,
+			},
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_2_SECONDARY_PLANES,
+				.result = OVERLAY_PLANE,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = FIRST_2_SECONDARY_PLANES,
+				.result = CURSOR_PLANE,
+			},
+		},
+	},
+	{
+		.name = "composition-3x-fail",
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.composition = true,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = NULL,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = FIRST_2_SECONDARY_PLANES,
+				.result = NULL,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { 0 },
+				.result = NULL,
+			},
+		},
+	},
+	{
+		.name = "composition-3x-partial",
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.composition = true,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = NULL,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = { 0 },
+				.result = NULL,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { CURSOR_PLANE },
+				.result = CURSOR_PLANE,
+			},
+		},
+	},
 };
 
 static void run_test(struct test_layer *test_layers)
@@ -480,6 +583,9 @@ static void run_test(struct test_layer *test_layers)
 		if (test_layer->zpos != 0) {
 			liftoff_layer_set_property(layers[i], "zpos",
 						   test_layer->zpos);
+		}
+		if (test_layer->composition) {
+			liftoff_output_set_composition_layer(output, layers[i]);
 		}
 		for (j = 0; test_layer->compat[j] != NULL; j++) {
 			mock_plane = mock_planes[test_layer->compat[j] -
