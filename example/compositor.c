@@ -65,16 +65,28 @@ static void composite(int drm_fd, struct dumb_fb *dst_fb, struct dumb_fb *src_fb
 		      int dst_x, int dst_y)
 {
 	uint8_t *dst, *src;
-	size_t y;
+	int i, y, src_width;
 
 	dst = dumb_fb_map(dst_fb, drm_fd);
 	src = dumb_fb_map(src_fb, drm_fd);
 
-	for (y = 0; y < src_fb->height; y++) {
-		memcpy(dst + dst_fb->stride * (dst_y + y) +
+	src_width = src_fb->width;
+	if (dst_x < 0) {
+		dst_x = 0;
+	}
+	if (dst_x + src_width > (int)dst_fb->width) {
+		src_width = dst_fb->width - dst_x;
+	}
+
+	for (i = 0; i < (int)src_fb->height; i++) {
+		y = dst_y + i;
+		if (y < 0 || y >= (int)dst_fb->height) {
+			continue;
+		}
+		memcpy(dst + dst_fb->stride * y +
 			     dst_x * sizeof(uint32_t),
-		       src + src_fb->stride * y,
-		       src_fb->width * sizeof(uint32_t));
+		       src + src_fb->stride * i,
+		       src_width * sizeof(uint32_t));
 	}
 
 	munmap(dst, dst_fb->size);
