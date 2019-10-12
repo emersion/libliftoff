@@ -467,6 +467,8 @@ bool output_choose_layers(struct liftoff_output *output,
 	if (result->best_score >= step->score + (int)remaining_planes) {
 		/* Even if we find a layer for all remaining planes, we won't
 		 * find a better allocation. Give up. */
+		/* TODO: change remaining_planes to only count those whose
+		 * possible CRTC match and which aren't allocated */
 		return true;
 	}
 
