@@ -607,6 +607,93 @@ skip:
 	return true;
 }
 
+static bool apply_current(struct liftoff_display *display,
+			  drmModeAtomicReq *req)
+{
+	struct liftoff_plane *plane;
+	int cursor;
+	bool compatible;
+
+	cursor = drmModeAtomicGetCursor(req);
+
+	liftoff_list_for_each(plane, &display->planes, link) {
+		if (!plane_apply(plane, plane->layer, req, &compatible)) {
+			drmModeAtomicSetCursor(req, cursor);
+			return false;
+		}
+		assert(compatible);
+	}
+
+	return true;
+}
+
+static bool layer_needs_realloc(struct liftoff_layer *layer)
+{
+	size_t i;
+	struct liftoff_layer_property *prop;
+
+	for (i = 0; i < layer->props_len; i++) {
+		prop = &layer->props[i];
+		if (!prop->changed) {
+			continue;
+		}
+		if (strcmp(prop->name, "FB_ID") == 0) {
+			/* TODO: check format/modifier is the same. Check
+			 * previous/next value isn't zero. */
+			continue;
+		}
+
+		/* TODO: if CRTC_{X,Y,W,H} changed but intersection with other
+		 * layers hasn't changed, don't realloc */
+		return true;
+	}
+
+	return false;
+}
+
+static bool reuse_previous_alloc(struct liftoff_display *display,
+				 drmModeAtomicReq *req)
+{
+	struct liftoff_output *output;
+	struct liftoff_layer *layer;
+	int cursor, ret;
+
+	liftoff_list_for_each(output, &display->outputs, link) {
+		liftoff_list_for_each(layer, &output->layers, link) {
+			if (layer_needs_realloc(layer)) {
+				return false;
+			}
+		}
+	}
+
+	cursor = drmModeAtomicGetCursor(req);
+
+	if (!apply_current(display, req)) {
+		return false;
+	}
+
+	ret = drmModeAtomicCommit(display->drm_fd, req,
+				  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
+	if (ret != 0) {
+		drmModeAtomicSetCursor(req, cursor);
+		return false;
+	}
+
+	return true;
+}
+
+static void mark_layers_clean(struct liftoff_display *display)
+{
+	struct liftoff_output *output;
+	struct liftoff_layer *layer;
+
+	liftoff_list_for_each(output, &display->outputs, link) {
+		liftoff_list_for_each(layer, &output->layers, link) {
+			layer_mark_clean(layer);
+		}
+	}
+}
+
 bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *req)
 {
 	struct liftoff_output *output;
@@ -616,6 +703,11 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	struct alloc_step step;
 	size_t i;
 	bool compatible;
+
+	if (reuse_previous_alloc(display, req)) {
+		liftoff_log(LIFTOFF_DEBUG, "Re-using previous plane allocation");
+		return true;
+	}
 
 	/* Unset all existing plane and layer mappings.
 	   TODO: incremental updates keeping old configuration if possible */
@@ -693,20 +785,22 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 			liftoff_log(LIFTOFF_DEBUG,
 				    "Assigning layer %p to plane %"PRIu32,
 				    (void *)layer, plane->id);
-			if (!plane_apply(plane, layer, req, &compatible)) {
-				return false;
-			}
-			assert(compatible);
 
 			assert(plane->layer == NULL);
 			assert(layer->plane == NULL);
 			plane->layer = layer;
 			layer->plane = plane;
 		}
+
+		if (!apply_current(display, req)) {
+			return false;
+		}
 	}
 
 	free(step.alloc);
 	free(result.best);
+
+	mark_layers_clean(display);
 
 	return true;
 }

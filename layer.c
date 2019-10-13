@@ -66,6 +66,10 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 		prop = &layer->props[layer->props_len - 1];
 		memset(prop, 0, sizeof(*prop));
 		strncpy(prop->name, name, sizeof(prop->name) - 1);
+
+		prop->changed = true;
+	} else {
+		prop->changed = prop->value != value;
 	}
 
 	prop->value = value;
@@ -103,4 +107,13 @@ bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b)
 
 	return ra.x < rb.x + rb.width && ra.y < rb.y + rb.height &&
 	       ra.x + ra.width > rb.x && ra.y + ra.height > rb.y;
+}
+
+void layer_mark_clean(struct liftoff_layer *layer)
+{
+	size_t i;
+
+	for (i = 0; i < layer->props_len; i++) {
+		layer->props[i].changed = false;
+	}
 }

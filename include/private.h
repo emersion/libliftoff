@@ -39,6 +39,7 @@ struct liftoff_layer {
 struct liftoff_layer_property {
 	char name[DRM_PROP_NAME_LEN];
 	uint64_t value;
+	bool changed;
 };
 
 struct liftoff_plane {
@@ -69,6 +70,7 @@ struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 						  const char *name);
 void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
 bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
+void layer_mark_clean(struct liftoff_layer *layer);
 
 struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id);
 void plane_destroy(struct liftoff_plane *plane);
