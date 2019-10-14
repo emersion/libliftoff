@@ -9,3 +9,9 @@ executable(
 	files('common.c', 'compositor.c'),
 	dependencies: [liftoff],
 )
+
+executable(
+	'dynamic',
+	files('common.c', 'dynamic.c'),
+	dependencies: [liftoff],
+)
