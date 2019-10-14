@@ -13,6 +13,7 @@
 #define MAX_PROPS 64
 
 uint32_t liftoff_mock_drm_crtc_id = 0xCC000000;
+size_t liftoff_mock_commit_count = 0;
 
 struct liftoff_mock_plane {
 	uint32_t id;
@@ -199,6 +200,8 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 
 	assert_drm_fd(fd);
 	assert(flags == DRM_MODE_ATOMIC_TEST_ONLY);
+
+	liftoff_mock_commit_count++;
 
 	for (i = 0; i < MAX_PLANES; i++) {
 		plane = &mock_planes[i];

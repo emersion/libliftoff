@@ -6,6 +6,7 @@
 #include <xf86drmMode.h>
 
 extern uint32_t liftoff_mock_drm_crtc_id;
+extern size_t liftoff_mock_commit_count;
 
 struct liftoff_layer;
 
