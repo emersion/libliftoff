@@ -35,6 +35,11 @@ tests = {
 		'composition-3x-fail',
 		'composition-3x-partial',
 	],
+	'dynamic': [
+		'same',
+		'fb',
+		'new-layer',
+	],
 }
 
 foreach test_name, subtests : tests
