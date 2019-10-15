@@ -1,3 +1,6 @@
+/* Minimalistic example: create a few layers and display as many of them as
+ * possible. Layers that don't make it into a plane won't be displayed. */
+
 #define _POSIX_C_SOURCE 200809L
 #include <drm_fourcc.h>
 #include <fcntl.h>

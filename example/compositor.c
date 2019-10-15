@@ -1,3 +1,7 @@
+/* Compositor: create a few layers, display as many of them as possible on a
+ * plane. Iterate over layers that didn't make it into a plane, and fallback to
+ * composition if necessary. */
+
 #define _POSIX_C_SOURCE 200809L
 #include <drm_fourcc.h>
 #include <fcntl.h>
