@@ -411,6 +411,98 @@ static bool has_allocated_plane_under(struct liftoff_output *output,
 	return false;
 }
 
+bool check_layer_plane_compatible(struct alloc_step *step,
+				  struct liftoff_layer *layer,
+				  struct liftoff_plane *plane)
+{
+	struct liftoff_output *output;
+	struct liftoff_layer_property *zpos_prop;
+
+	output = layer->output;
+
+	/* Skip this layer if already allocated */
+	if (is_layer_allocated(step, layer)) {
+		return false;
+	}
+
+	zpos_prop = layer_get_property(layer, "zpos");
+	if (zpos_prop != NULL) {
+		if ((int)zpos_prop->value > step->last_layer_zpos &&
+		    has_allocated_layer_over(output, step, layer)) {
+			/* This layer needs to be on top of the last
+			 * allocated one */
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Layer %p -> plane %"PRIu32": "
+				    "layer zpos invalid",
+				    (void *)layer, plane->id);
+			return false;
+		}
+		if ((int)zpos_prop->value < step->last_layer_zpos &&
+		    has_allocated_plane_under(output, step, layer)) {
+			/* This layer needs to be under the last
+			 * allocated one, but this plane isn't under the
+			 * last one (in practice, since planes are
+			 * sorted by zpos it means it has the same zpos,
+			 * ie. undefined ordering). */
+			liftoff_log(LIFTOFF_DEBUG,
+				    "Layer %p -> plane %"PRIu32": "
+				    "plane zpos invalid",
+				    (void *)layer, plane->id);
+			return false;
+		}
+	}
+
+	if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
+	    has_composited_layer_over(output, step, layer)) {
+		liftoff_log(LIFTOFF_DEBUG,
+			    "Layer %p -> plane %"PRIu32": "
+			    "has composited layer on top",
+			    (void *)layer, plane->id);
+		return false;
+	}
+
+	if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
+	    layer == layer->output->composition_layer) {
+		liftoff_log(LIFTOFF_DEBUG,
+			    "Layer %p -> plane %"PRIu32": "
+			    "cannot put composition layer on "
+			    "non-primary plane",
+			    (void *)layer, plane->id);
+		return false;
+	}
+
+	return true;
+}
+
+bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
+{
+	/* If composition isn't used, we need to have allocated all
+	 * layers. */
+	/* TODO: find a way to fail earlier, e.g. when the number of
+	 * layers exceeds the number of planes. */
+	if (result->has_composition_layer && !step->composited &&
+	    step->score != (int)result->non_composition_layers_len) {
+		liftoff_log(LIFTOFF_DEBUG,
+			    "Cannot skip composition: some layers "
+			    "are missing a plane");
+		return false;
+	}
+	/* On the other hand, if we manage to allocate all layers, we
+	 * don't want to use composition. We don't want to use the
+	 * composition layer at all. */
+	if (step->composited &&
+	    step->score == (int)result->non_composition_layers_len) {
+		liftoff_log(LIFTOFF_DEBUG,
+			    "Refusing to use composition: all layers "
+			    "have been put in a plane");
+		return false;
+	}
+
+	/* TODO: check allocation isn't empty */
+
+	return true;
+}
+
 bool output_choose_layers(struct liftoff_output *output,
 			  struct alloc_result *result, struct alloc_step *step)
 {
@@ -421,36 +513,12 @@ bool output_choose_layers(struct liftoff_output *output,
 	size_t remaining_planes;
 	bool compatible;
 	struct alloc_step next_step;
-	struct liftoff_layer_property *zpos_prop;
 
 	display = output->display;
 
 	if (step->plane_link == &display->planes) { /* Allocation finished */
-		/* If composition isn't used, we need to have allocated all
-		 * layers. */
-		/* TODO: find a way to fail earlier, e.g. when the number of
-		 * layers exceeds the number of planes. */
-		if (result->has_composition_layer && !step->composited &&
-		    step->score != (int)result->non_composition_layers_len) {
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Cannot skip composition: some layers "
-				    "are missing a plane");
-			return true;
-		}
-		/* On the other hand, if we manage to allocate all layers, we
-		 * don't want to use composition. We don't want to use the
-		 * composition layer at all. */
-		if (step->composited &&
-		    step->score == (int)result->non_composition_layers_len) {
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Refusing to use composition: all layers "
-				    "have been put in a plane");
-			return true;
-		}
-
-		/* TODO: check allocation isn't empty */
-
-		if (step->score > result->best_score) {
+		if (step->score > result->best_score &&
+		    check_alloc_valid(result, step)) {
 			/* We found a better allocation */
 			liftoff_log(LIFTOFF_DEBUG,
 				    "Found a better allocation with score=%d",
@@ -461,6 +529,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 		return true;
 	}
+
 	plane = liftoff_container_of(step->plane_link, plane, link);
 
 	remaining_planes = result->planes_len - step->plane_idx;
@@ -489,55 +558,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		if (layer->plane != NULL) {
 			continue;
 		}
-
-		/* Skip this layer if already allocated */
-		if (is_layer_allocated(step, layer)) {
-			continue;
-		}
-
-		zpos_prop = layer_get_property(layer, "zpos");
-		if (zpos_prop != NULL) {
-			if ((int)zpos_prop->value > step->last_layer_zpos &&
-			    has_allocated_layer_over(output, step, layer)) {
-				/* This layer needs to be on top of the last
-				 * allocated one */
-				liftoff_log(LIFTOFF_DEBUG,
-					    "Layer %p -> plane %"PRIu32": "
-					    "layer zpos invalid",
-					    (void *)layer, plane->id);
-				continue;
-			}
-			if ((int)zpos_prop->value < step->last_layer_zpos &&
-			    has_allocated_plane_under(output, step, layer)) {
-				/* This layer needs to be under the last
-				 * allocated one, but this plane isn't under the
-				 * last one (in practice, since planes are
-				 * sorted by zpos it means it has the same zpos,
-				 * ie. undefined ordering). */
-				liftoff_log(LIFTOFF_DEBUG,
-					    "Layer %p -> plane %"PRIu32": "
-					    "plane zpos invalid",
-					    (void *)layer, plane->id);
-				continue;
-			}
-		}
-
-		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
-		    has_composited_layer_over(output, step, layer)) {
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Layer %p -> plane %"PRIu32": "
-				    "has composited layer on top",
-				    (void *)layer, plane->id);
-			continue;
-		}
-
-		if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
-		    layer == layer->output->composition_layer) {
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Layer %p -> plane %"PRIu32": "
-				    "cannot put composition layer on "
-				    "non-primary plane",
-				    (void *)layer, plane->id);
+		if (!check_layer_plane_compatible(step, layer, plane)) {
 			continue;
 		}
 
