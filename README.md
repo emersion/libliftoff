@@ -8,6 +8,8 @@ libliftoff eases the use of KMS planes from userspace without standing in your
 way.  Users create "virtual planes" called layers, set KMS properties on them,
 and libliftoff will allocate planes for these layers if possible.
 
+See the [blog post introducing the project][intro-post] for more context.
+
 ## Building
 
 Depends on libdrm. Requires universal planes and atomic.
@@ -52,3 +54,4 @@ drmModeAtomicFree(req);
 MIT
 
 [liftoff.h]: https://github.com/emersion/libliftoff/blob/master/include/libliftoff.h
+[intro-post]: https://emersion.fr/blog/2019/xdc2019-wrap-up/#libliftoff
