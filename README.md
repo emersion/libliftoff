@@ -36,8 +36,8 @@ liftoff_layer_set_property(layer, "FB_ID", fb_id);
 /* Probably setup more properties and more layers */
 
 req = drmModeAtomicAlloc();
-if (!liftoff_device_apply(device, req)) {
-	perror("liftoff_device_apply");
+if (!liftoff_output_apply(output, req)) {
+	perror("liftoff_output_apply");
 	exit(1);
 }
 

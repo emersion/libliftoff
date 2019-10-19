@@ -509,23 +509,23 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 	return false;
 }
 
-static bool reuse_previous_alloc(struct liftoff_device *device,
+static bool reuse_previous_alloc(struct liftoff_output *output,
 				 drmModeAtomicReq *req)
 {
-	struct liftoff_output *output;
+	struct liftoff_device *device;
 	struct liftoff_layer *layer;
 	int cursor;
 	bool compatible;
 
-	liftoff_list_for_each(output, &device->outputs, link) {
-		if (output->layers_changed) {
-			return false;
-		}
+	device = output->device;
 
-		liftoff_list_for_each(layer, &output->layers, link) {
-			if (layer_needs_realloc(layer)) {
-				return false;
-			}
+	if (output->layers_changed) {
+		return false;
+	}
+
+	liftoff_list_for_each(layer, &output->layers, link) {
+		if (layer_needs_realloc(layer)) {
+			return false;
 		}
 	}
 
@@ -542,17 +542,14 @@ static bool reuse_previous_alloc(struct liftoff_device *device,
 	return true;
 }
 
-static void mark_layers_clean(struct liftoff_device *device)
+static void mark_layers_clean(struct liftoff_output *output)
 {
-	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 
-	liftoff_list_for_each(output, &device->outputs, link) {
-		output->layers_changed = false;
+	output->layers_changed = false;
 
-		liftoff_list_for_each(layer, &output->layers, link) {
-			layer_mark_clean(layer);
-		}
+	liftoff_list_for_each(layer, &output->layers, link) {
+		layer_mark_clean(layer);
 	}
 }
 
@@ -575,9 +572,9 @@ static void update_layers_priority(struct liftoff_device *device)
 	}
 }
 
-bool liftoff_device_apply(struct liftoff_device *device, drmModeAtomicReq *req)
+bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 {
-	struct liftoff_output *output;
+	struct liftoff_device *device;
 	struct liftoff_plane *plane;
 	struct liftoff_layer *layer;
 	struct alloc_result result;
@@ -585,16 +582,18 @@ bool liftoff_device_apply(struct liftoff_device *device, drmModeAtomicReq *req)
 	size_t i;
 	bool compatible;
 
+	device = output->device;
+
 	update_layers_priority(device);
 
-	if (reuse_previous_alloc(device, req)) {
+	if (reuse_previous_alloc(output, req)) {
 		liftoff_log(LIFTOFF_DEBUG, "Re-using previous plane allocation");
 		return true;
 	}
 
 	/* Unset all existing plane and layer mappings. */
 	liftoff_list_for_each(plane, &device->planes, link) {
-		if (plane->layer != NULL) {
+		if (plane->layer != NULL && plane->layer->output == output) {
 			plane->layer->plane = NULL;
 			plane->layer = NULL;
 		}
@@ -623,66 +622,59 @@ bool liftoff_device_apply(struct liftoff_device *device, drmModeAtomicReq *req)
 		return false;
 	}
 
-	/* TODO: maybe start by allocating the primary plane on each output to
-	 * make sure we can display at least something without hitting bandwidth
-	 * issues? Also: be fair when mapping planes to outputs, don't give all
-	 * planes to a single output. Also: don't treat each output separately,
-	 * allocate planes for all outputs at once. */
-	liftoff_list_for_each(output, &device->outputs, link) {
-		/* For each plane, try to find a layer. Don't do it the other
-		 * way around (ie. for each layer, try to find a plane) because
-		 * some drivers want user-space to enable the primary plane
-		 * before any other plane. */
+	/* For each plane, try to find a layer. Don't do it the other
+	 * way around (ie. for each layer, try to find a plane) because
+	 * some drivers want user-space to enable the primary plane
+	 * before any other plane. */
 
-		result.best_score = -1;
-		memset(result.best, 0, result.planes_len * sizeof(*result.best));
-		result.has_composition_layer = output->composition_layer != NULL;
-		result.non_composition_layers_len =
-			liftoff_list_length(&output->layers);
-		if (output->composition_layer != NULL) {
-			result.non_composition_layers_len--;
-		}
-		step.plane_link = device->planes.next;
-		step.plane_idx = 0;
-		step.score = 0;
-		step.last_layer_zpos = INT_MAX;
-		step.composited = false;
-		if (!output_choose_layers(output, &result, &step)) {
-			return false;
+	result.best_score = -1;
+	memset(result.best, 0, result.planes_len * sizeof(*result.best));
+	result.has_composition_layer = output->composition_layer != NULL;
+	result.non_composition_layers_len =
+		liftoff_list_length(&output->layers);
+	if (output->composition_layer != NULL) {
+		result.non_composition_layers_len--;
+	}
+	step.plane_link = device->planes.next;
+	step.plane_idx = 0;
+	step.score = 0;
+	step.last_layer_zpos = INT_MAX;
+	step.composited = false;
+	if (!output_choose_layers(output, &result, &step)) {
+		return false;
+	}
+
+	liftoff_log(LIFTOFF_DEBUG,
+		    "Found plane allocation for output %p with "
+		    "score=%d", (void *)output, result.best_score);
+
+	/* Apply the best allocation */
+	i = 0;
+	liftoff_list_for_each(plane, &device->planes, link) {
+		layer = result.best[i];
+		i++;
+		if (layer == NULL) {
+			continue;
 		}
 
 		liftoff_log(LIFTOFF_DEBUG,
-			    "Found plane allocation for output %p with "
-			    "score=%d", (void *)output, result.best_score);
+			    "Assigning layer %p to plane %"PRIu32,
+			    (void *)layer, plane->id);
 
-		/* Apply the best allocation */
-		i = 0;
-		liftoff_list_for_each(plane, &device->planes, link) {
-			layer = result.best[i];
-			i++;
-			if (layer == NULL) {
-				continue;
-			}
+		assert(plane->layer == NULL);
+		assert(layer->plane == NULL);
+		plane->layer = layer;
+		layer->plane = plane;
+	}
 
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Assigning layer %p to plane %"PRIu32,
-				    (void *)layer, plane->id);
-
-			assert(plane->layer == NULL);
-			assert(layer->plane == NULL);
-			plane->layer = layer;
-			layer->plane = plane;
-		}
-
-		if (!apply_current(device, req)) {
-			return false;
-		}
+	if (!apply_current(device, req)) {
+		return false;
 	}
 
 	free(step.alloc);
 	free(result.best);
 
-	mark_layers_clean(device);
+	mark_layers_clean(output);
 
 	return true;
 }

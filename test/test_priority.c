@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
 			liftoff_layer_set_property(layer, "FB_ID", fbs[j % 2]);
 
-			ok = liftoff_device_apply(device, req);
+			ok = liftoff_output_apply(output, req);
 			assert(ok);
 		}
 

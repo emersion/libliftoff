@@ -154,9 +154,11 @@ int main(int argc, char *argv[])
 	}
 
 	req = drmModeAtomicAlloc();
-	if (!liftoff_device_apply(device, req)) {
-		perror("liftoff_device_commit");
-		return 1;
+	for (i = 0; i < outputs_len; i++) {
+		if (!liftoff_output_apply(outputs[i], req)) {
+			perror("liftoff_output_apply");
+			return 1;
+		}
 	}
 
 	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK, NULL);

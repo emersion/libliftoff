@@ -596,7 +596,7 @@ static void run_test(struct test_layer *test_layers)
 	}
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_device_apply(device, req);
+	ok = liftoff_output_apply(output, req);
 	assert(ok);
 	drmModeAtomicFree(req);
 
@@ -657,7 +657,7 @@ static void test_basic(void)
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_device_apply(device, req);
+	ok = liftoff_output_apply(output, req);
 	assert(ok);
 	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
 	drmModeAtomicFree(req);
