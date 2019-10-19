@@ -43,11 +43,13 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "calloc");
 		return NULL;
 	}
 
 	drm_plane = drmModeGetPlane(display->drm_fd, id);
 	if (drm_plane == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetPlane");
 		return NULL;
 	}
 	plane->id = drm_plane->plane_id;
@@ -57,11 +59,13 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 	drm_props = drmModeObjectGetProperties(display->drm_fd, id,
 					       DRM_MODE_OBJECT_PLANE);
 	if (drm_props == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeObjectGetProperties");
 		return NULL;
 	}
 	plane->props = calloc(drm_props->count_props,
 			      sizeof(struct liftoff_plane_property));
 	if (plane->props == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "calloc");
 		drmModeFreeObjectProperties(drm_props);
 		return NULL;
 	}
@@ -69,6 +73,7 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 		drm_prop = drmModeGetProperty(display->drm_fd,
 					      drm_props->props[i]);
 		if (drm_prop == NULL) {
+			liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetProperty");
 			drmModeFreeObjectProperties(drm_props);
 			return NULL;
 		}

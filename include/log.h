@@ -11,5 +11,6 @@
 
 void liftoff_log(enum liftoff_log_importance verbosity,
 		 const char *format, ...) _LIFTOFF_ATTRIB_PRINTF(2, 3);
+void liftoff_log_errno(enum liftoff_log_importance verbosity, const char *msg);
 
 #endif

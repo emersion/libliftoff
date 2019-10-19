@@ -9,6 +9,7 @@ struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output)
 
 	layer = calloc(1, sizeof(*layer));
 	if (layer == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "calloc");
 		return NULL;
 	}
 	layer->output = output;
@@ -57,7 +58,7 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 		props = realloc(layer->props, (layer->props_len + 1)
 				* sizeof(struct liftoff_layer_property));
 		if (props == NULL) {
-			perror("realloc");
+			liftoff_log_errno(LIFTOFF_ERROR, "realloc");
 			return;
 		}
 		layer->props = props;

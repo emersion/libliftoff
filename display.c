@@ -18,6 +18,7 @@ struct liftoff_display *liftoff_display_create(int drm_fd)
 
 	display = calloc(1, sizeof(*display));
 	if (display == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "calloc");
 		return NULL;
 	}
 
@@ -26,18 +27,21 @@ struct liftoff_display *liftoff_display_create(int drm_fd)
 
 	display->drm_fd = dup(drm_fd);
 	if (display->drm_fd < 0) {
+		liftoff_log_errno(LIFTOFF_ERROR, "dup");
 		liftoff_display_destroy(display);
 		return NULL;
 	}
 
 	drm_res = drmModeGetResources(drm_fd);
 	if (drm_res == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetResources");
 		liftoff_display_destroy(display);
 		return NULL;
 	}
 
 	display->crtcs = malloc(drm_res->count_crtcs * sizeof(uint32_t));
 	if (display->crtcs == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "malloc");
 		drmModeFreeResources(drm_res);
 		liftoff_display_destroy(display);
 		return NULL;
@@ -51,6 +55,7 @@ struct liftoff_display *liftoff_display_create(int drm_fd)
 	/* TODO: allow users to choose which layers to hand over */
 	drm_plane_res = drmModeGetPlaneResources(drm_fd);
 	if (drm_plane_res == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetPlaneResources");
 		liftoff_display_destroy(display);
 		return NULL;
 	}
@@ -100,7 +105,7 @@ static bool plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
 		    prop->name, value);
 	ret = drmModeAtomicAddProperty(req, plane->id, prop->id, value);
 	if (ret < 0) {
-		perror("drmModeAtomicAddProperty");
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeAtomicAddProperty");
 		return false;
 	}
 
@@ -515,7 +520,7 @@ static bool display_test_commit(struct liftoff_display *display,
 	} else if (-ret == EINVAL || -ret == ERANGE) {
 		*compatible = false;
 	} else {
-		perror("drmModeAtomicCommit");
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeAtomicCommit");
 		*compatible = false;
 		return false;
 	}
@@ -753,7 +758,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	step.alloc = malloc(result.planes_len * sizeof(*step.alloc));
 	result.best = malloc(result.planes_len * sizeof(*result.best));
 	if (step.alloc == NULL || result.best == NULL) {
-		perror("malloc");
+		liftoff_log_errno(LIFTOFF_ERROR, "malloc");
 		return false;
 	}
 

@@ -1,4 +1,6 @@
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include "log.h"
 
 static enum liftoff_log_importance log_importance = LIFTOFF_ERROR;
@@ -30,4 +32,9 @@ void liftoff_log(enum liftoff_log_importance verbosity, const char *fmt, ...)
 	va_start(args, fmt);
 	log_callback(verbosity, fmt, args);
 	va_end(args);
+}
+
+void liftoff_log_errno(enum liftoff_log_importance verbosity, const char *msg)
+{
+	liftoff_log(verbosity, "%s: %s", msg, strerror(errno));
 }
