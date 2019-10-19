@@ -503,13 +503,33 @@ bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 	return true;
 }
 
+static bool display_test_commit(struct liftoff_display *display,
+				drmModeAtomicReq *req, bool *compatible)
+{
+	int ret;
+
+	ret = drmModeAtomicCommit(display->drm_fd, req,
+				  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
+	if (ret == 0) {
+		*compatible = true;
+	} else if (-ret == EINVAL || -ret == ERANGE) {
+		*compatible = false;
+	} else {
+		perror("drmModeAtomicCommit");
+		*compatible = false;
+		return false;
+	}
+
+	return true;
+}
+
 bool output_choose_layers(struct liftoff_output *output,
 			  struct alloc_result *result, struct alloc_step *step)
 {
 	struct liftoff_display *display;
 	struct liftoff_plane *plane;
 	struct liftoff_layer *layer;
-	int cursor, ret;
+	int cursor;
 	size_t remaining_planes;
 	bool compatible;
 	struct alloc_step next_step;
@@ -577,9 +597,10 @@ bool output_choose_layers(struct liftoff_output *output,
 			continue;
 		}
 
-		ret = drmModeAtomicCommit(display->drm_fd, result->req,
-					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
-		if (ret == 0) {
+		if (!display_test_commit(display, result->req, &compatible)) {
+			return false;
+		}
+		if (compatible) {
 			liftoff_log(LIFTOFF_DEBUG,
 				    "Layer %p -> plane %"PRIu32": success",
 				    (void *)layer, plane->id);
@@ -588,9 +609,6 @@ bool output_choose_layers(struct liftoff_output *output,
 			if (!output_choose_layers(output, result, &next_step)) {
 				return false;
 			}
-		} else if (-ret != EINVAL && -ret != ERANGE) {
-			perror("drmModeAtomicCommit");
-			return false;
 		}
 
 		drmModeAtomicSetCursor(result->req, cursor);
@@ -656,7 +674,8 @@ static bool reuse_previous_alloc(struct liftoff_display *display,
 {
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
-	int cursor, ret;
+	int cursor;
+	bool compatible;
 
 	liftoff_list_for_each(output, &display->outputs, link) {
 		liftoff_list_for_each(layer, &output->layers, link) {
@@ -671,10 +690,7 @@ static bool reuse_previous_alloc(struct liftoff_display *display,
 	if (!apply_current(display, req)) {
 		return false;
 	}
-
-	ret = drmModeAtomicCommit(display->drm_fd, req,
-				  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
-	if (ret != 0) {
+	if (!display_test_commit(display, req, &compatible) || !compatible) {
 		drmModeAtomicSetCursor(req, cursor);
 		return false;
 	}
