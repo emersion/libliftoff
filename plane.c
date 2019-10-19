@@ -134,3 +134,93 @@ void plane_destroy(struct liftoff_plane *plane)
 	free(plane->props);
 	free(plane);
 }
+
+struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
+						  const char *name)
+{
+	size_t i;
+
+	for (i = 0; i < plane->props_len; i++) {
+		if (strcmp(plane->props[i].name, name) == 0) {
+			return &plane->props[i];
+		}
+	}
+	return NULL;
+}
+
+static bool plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
+			   struct liftoff_plane_property *prop, uint64_t value)
+{
+	int ret;
+
+	liftoff_log(LIFTOFF_DEBUG, "  Setting %s = %"PRIu64,
+		    prop->name, value);
+	ret = drmModeAtomicAddProperty(req, plane->id, prop->id, value);
+	if (ret < 0) {
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeAtomicAddProperty");
+		return false;
+	}
+
+	return true;
+}
+
+static bool set_plane_prop_str(struct liftoff_plane *plane,
+			       drmModeAtomicReq *req, const char *name,
+			       uint64_t value)
+{
+	struct liftoff_plane_property *prop;
+
+	prop = plane_get_property(plane, name);
+	if (prop == NULL) {
+		liftoff_log(LIFTOFF_DEBUG,
+			    "plane %"PRIu32" is missing the %s property",
+			    plane->id, name);
+		return false;
+	}
+
+	return plane_set_prop(plane, req, prop, value);
+}
+
+bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
+		 drmModeAtomicReq *req, bool *compatible)
+{
+	int cursor;
+	size_t i;
+	struct liftoff_layer_property *layer_prop;
+	struct liftoff_plane_property *plane_prop;
+
+	*compatible = true;
+	cursor = drmModeAtomicGetCursor(req);
+
+	if (layer == NULL) {
+		return set_plane_prop_str(plane, req, "FB_ID", 0) &&
+		       set_plane_prop_str(plane, req, "CRTC_ID", 0);
+	}
+
+	if (!set_plane_prop_str(plane, req, "CRTC_ID", layer->output->crtc_id)) {
+		return false;
+	}
+
+	for (i = 0; i < layer->props_len; i++) {
+		layer_prop = &layer->props[i];
+		if (strcmp(layer_prop->name, "zpos") == 0) {
+			/* We don't yet support setting the zpos property. We
+			 * only use it (read-only) during plane allocation. */
+			continue;
+		}
+
+		plane_prop = plane_get_property(plane, layer_prop->name);
+		if (plane_prop == NULL) {
+			*compatible = false;
+			drmModeAtomicSetCursor(req, cursor);
+			return true;
+		}
+
+		if (!plane_set_prop(plane, req, plane_prop, layer_prop->value)) {
+			drmModeAtomicSetCursor(req, cursor);
+			return false;
+		}
+	}
+
+	return true;
+}

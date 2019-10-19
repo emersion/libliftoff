@@ -27,6 +27,7 @@ liftoff_deps = [drm]
 liftoff_lib = library(
 	meson.project_name(),
 	files(
+		'alloc.c',
 		'display.c',
 		'layer.c',
 		'list.c',

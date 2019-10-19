@@ -74,5 +74,9 @@ void layer_mark_clean(struct liftoff_layer *layer);
 
 struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id);
 void plane_destroy(struct liftoff_plane *plane);
+struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
+						  const char *name);
+bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
+		 drmModeAtomicReq *req, bool *compatible);
 
 #endif
