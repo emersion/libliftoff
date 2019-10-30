@@ -19,6 +19,8 @@ void liftoff_log_init(enum liftoff_log_importance verbosity,
 	log_importance = verbosity;
 	if (callback) {
 		log_callback = callback;
+	} else {
+		log_callback = log_stderr;
 	}
 }
 
