@@ -15,3 +15,9 @@ executable(
 	files('common.c', 'dynamic.c'),
 	dependencies: [liftoff],
 )
+
+executable(
+	'multi-output',
+	files('common.c', 'multi-output.c'),
+	dependencies: [liftoff],
+)
