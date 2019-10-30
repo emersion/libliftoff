@@ -15,6 +15,12 @@ mock_liftoff = declare_dependency(
 	dependencies: drm.partial_dependency(compile_args: true),
 )
 
+bench_exe = executable(
+	'bench',
+	files('bench.c'),
+	dependencies: mock_liftoff,
+)
+
 tests = {
 	'alloc': [
 		'basic',
