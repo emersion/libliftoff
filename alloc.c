@@ -565,8 +565,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 		return true;
 	}
 
-	/* Unset all existing plane and layer mappings.
-	   TODO: incremental updates keeping old configuration if possible */
+	/* Unset all existing plane and layer mappings. */
 	liftoff_list_for_each(plane, &display->planes, link) {
 		if (plane->layer != NULL) {
 			plane->layer->plane = NULL;
