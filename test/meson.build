@@ -40,6 +40,9 @@ tests = {
 		'fb',
 		'new-layer',
 	],
+	'priority': [
+		#'basic',
+	],
 }
 
 foreach test_name, subtests : tests
