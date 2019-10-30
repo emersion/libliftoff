@@ -9,8 +9,9 @@
 #include "libdrm_mock.h"
 
 #define MAX_PLANES 64
-#define MAX_LAYERS 64
-#define MAX_PROPS 64
+#define MAX_LAYERS 512
+#define MAX_PLANE_PROPS 64
+#define MAX_REQ_PROPS 1024
 
 uint32_t liftoff_mock_drm_crtc_id = 0xCC000000;
 size_t liftoff_mock_commit_count = 0;
@@ -27,7 +28,7 @@ struct liftoff_mock_prop {
 };
 
 struct _drmModeAtomicReq {
-	struct liftoff_mock_prop props[512];
+	struct liftoff_mock_prop props[MAX_REQ_PROPS];
 	int cursor;
 };
 
@@ -320,7 +321,7 @@ drmModeObjectProperties *drmModeObjectGetProperties(int fd, uint32_t obj_id,
 	struct liftoff_mock_plane *plane;
 	drmModeObjectProperties *props;
 	size_t i;
-	static uint32_t prop_ids[MAX_PROPS];
+	static uint32_t prop_ids[MAX_PLANE_PROPS];
 
 	assert_drm_fd(fd);
 	assert(obj_type == DRM_MODE_OBJECT_PLANE);
