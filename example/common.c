@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <drm_fourcc.h>
+#include <stdio.h>
 #include <stddef.h>
 #include <sys/mman.h>
 #include <xf86drm.h>
@@ -26,13 +27,43 @@ drmModeCrtc *pick_crtc(int drm_fd, drmModeRes *drm_res,
 {
 	drmModeEncoder *enc;
 	uint32_t crtc_id;
+	int i;
+	int j;
+	bool found;
 
-	/* TODO: don't blindly use current CRTC */
 	enc = drmModeGetEncoder(drm_fd, connector->encoder_id);
-	crtc_id = enc->crtc_id;
-	drmModeFreeEncoder(enc);
 
-	return drmModeGetCrtc(drm_fd, crtc_id);
+	if (enc) {
+		/* Current CRTC happens to be usable on the selected connector */
+		crtc_id = enc->crtc_id;
+		drmModeFreeEncoder(enc);
+		return drmModeGetCrtc(drm_fd, crtc_id);
+	} else {
+		/* Current CRTC used by this encoder can't drive the selected connector.
+		 * Search all of them for a valid combination. */
+		for (i = 0, found = false; !found && i < connector->count_encoders; i++) {
+			enc = drmModeGetEncoder(drm_fd, connector->encoders[i]);
+
+			if (!enc) {
+				continue;
+			}
+
+			for (j = 0; !found && j < drm_res->count_crtcs; j++) {
+				/* Can the CRTC drive the connector? */
+				if (enc->possible_crtcs & (1 << j)) {
+					crtc_id = drm_res->crtcs[j];
+					found = true;
+				}
+			}
+			drmModeFreeEncoder(enc);
+		}
+
+		if (found) {
+			return drmModeGetCrtc(drm_fd, crtc_id);
+		} else {
+			return NULL;
+		}
+	}
 }
 
 void disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res, uint32_t crtc_id)
