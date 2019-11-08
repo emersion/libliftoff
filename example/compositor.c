@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "no connector found\n");
 		return 1;
 	}
-	if (crtc == NULL || !crtc->mode_valid) {
+	if (crtc == NULL) {
 		fprintf(stderr, "no CRTC found\n");
 		return 1;
 	}
@@ -175,11 +175,11 @@ int main(int argc, char *argv[])
 	printf("Using connector %d, CRTC %d\n", connector->connector_id,
 	       crtc->crtc_id);
 
-	composition_layer = add_layer(drm_fd, output, 0, 0, crtc->mode.hdisplay,
-				      crtc->mode.vdisplay, false, true,
+	composition_layer = add_layer(drm_fd, output, 0, 0, connector->modes[0].hdisplay,
+				      connector->modes[0].vdisplay, false, true,
 				      &composition_fb);
-	layers[0] = add_layer(drm_fd, output, 0, 0, crtc->mode.hdisplay,
-			      crtc->mode.vdisplay, false, true, &fbs[0]);
+	layers[0] = add_layer(drm_fd, output, 0, 0, connector->modes[0].hdisplay,
+			      connector->modes[0].vdisplay, false, true, &fbs[0]);
 	for (i = 1; i < layers_len; i++) {
 		layers[i] = add_layer(drm_fd, output, 100 * i, 100 * i,
 				      256, 256, i % 2, false, &fbs[i]);
@@ -206,7 +206,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK, NULL);
+	set_global_properties(drm_fd, req, connector, crtc, &connector->modes[0]);
+
+	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK | DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
 		return false;

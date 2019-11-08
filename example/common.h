@@ -16,6 +16,9 @@ drmModeConnector *pick_connector(int drm_fd, drmModeRes *drm_res);
 drmModeCrtc *pick_crtc(int drm_fd, drmModeRes *drm_res,
 		       drmModeConnector *connector);
 void disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res, uint32_t crtc_id);
+bool set_global_properties(int drm_fd, drmModeAtomicReq *req,
+			   const drmModeConnector *connector, const drmModeCrtc *crtc,
+			   const drmModeModeInfo *mode);
 
 bool dumb_fb_init(struct dumb_fb *fb, int drm_fd, uint32_t format,
 		  uint32_t width, uint32_t height);

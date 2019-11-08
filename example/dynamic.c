@@ -27,7 +27,12 @@ struct example_layer {
 	struct liftoff_layer *layer;
 };
 
-static int drm_fd = -1;
+struct pageflip_context {
+	int drm_fd;
+	drmModeConnectorPtr connector;
+	drmModeCrtcPtr crtc;
+};
+
 static struct liftoff_display *display = NULL;
 static struct example_layer layers[LAYERS_LEN] = {0};
 static size_t active_layer_idx = 2;
@@ -84,7 +89,7 @@ static void draw_layer(int drm_fd, struct example_layer *layer)
 	liftoff_layer_set_property(layer->layer, "CRTC_Y", layer->y);
 }
 
-static bool draw(void)
+static bool draw(struct pageflip_context *context)
 {
 	struct example_layer *active_layer;
 	drmModeAtomicReq *req;
@@ -104,7 +109,7 @@ static bool draw(void)
 		active_layer->dec = inc;
 	}
 
-	draw_layer(drm_fd, active_layer);
+	draw_layer(context->drm_fd, active_layer);
 
 	req = drmModeAtomicAlloc();
 	if (!liftoff_display_apply(display, req)) {
@@ -112,8 +117,10 @@ static bool draw(void)
 		return false;
 	}
 
-	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK |
-				  DRM_MODE_PAGE_FLIP_EVENT, NULL);
+	set_global_properties(context->drm_fd, req, context->connector, context->crtc, &context->connector->modes[0]);
+
+	ret = drmModeAtomicCommit(context->drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK |
+				  DRM_MODE_PAGE_FLIP_EVENT | DRM_MODE_ATOMIC_ALLOW_MODESET, context);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
 		return false;
@@ -132,62 +139,66 @@ static bool draw(void)
 static void page_flip_handler(int fd, unsigned seq, unsigned tv_sec,
 			      unsigned tv_usec, unsigned crtc_id, void *data)
 {
-	draw();
+	struct pageflip_context *context = data;
+	draw(context);
 }
 
 int main(int argc, char *argv[])
 {
+	struct pageflip_context context = {
+		.drm_fd = -1,
+		.connector = NULL,
+		.crtc = NULL,
+	};
 	drmModeRes *drm_res;
-	drmModeCrtc *crtc;
-	drmModeConnector *connector;
 	struct liftoff_output *output;
 	size_t i;
 	int ret;
 
-	drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
-	if (drm_fd < 0) {
+	context.drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
+	if (context.drm_fd < 0) {
 		perror("open");
 		return 1;
 	}
 
-	if (drmSetClientCap(drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) < 0) {
+	if (drmSetClientCap(context.drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) < 0) {
 		perror("drmSetClientCap(UNIVERSAL_PLANES)");
 		return 1;
 	}
-	if (drmSetClientCap(drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) < 0) {
+	if (drmSetClientCap(context.drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) < 0) {
 		perror("drmSetClientCap(ATOMIC)");
 		return 1;
 	}
 
-	display = liftoff_display_create(drm_fd);
+	display = liftoff_display_create(context.drm_fd);
 	if (display == NULL) {
 		perror("liftoff_display_create");
 		return 1;
 	}
 
-	drm_res = drmModeGetResources(drm_fd);
-	connector = pick_connector(drm_fd, drm_res);
-	crtc = pick_crtc(drm_fd, drm_res, connector);
-	disable_all_crtcs_except(drm_fd, drm_res, crtc->crtc_id);
-	output = liftoff_output_create(display, crtc->crtc_id);
+	drm_res = drmModeGetResources(context.drm_fd);
+	context.connector = pick_connector(context.drm_fd, drm_res);
+	context.crtc = pick_crtc(context.drm_fd, drm_res, context.connector);
+	disable_all_crtcs_except(context.drm_fd, drm_res, context.crtc->crtc_id);
+	output = liftoff_output_create(display, context.crtc->crtc_id);
 	drmModeFreeResources(drm_res);
 
-	if (connector == NULL) {
+	if (context.connector == NULL) {
 		fprintf(stderr, "no connector found\n");
 		return 1;
 	}
-	if (crtc == NULL || !crtc->mode_valid) {
+	if (context.crtc == NULL) {
 		fprintf(stderr, "no CRTC found\n");
 		return 1;
 	}
 
-	printf("Using connector %d, CRTC %d\n", connector->connector_id,
-	       crtc->crtc_id);
+	printf("Using connector %d, CRTC %d\n", context.connector->connector_id,
+	       context.crtc->crtc_id);
 
-	init_layer(drm_fd, &layers[0], output, crtc->mode.hdisplay,
-		   crtc->mode.vdisplay, false);
+	init_layer(context.drm_fd, &layers[0], output, context.connector->modes[0].hdisplay,
+		   context.connector->modes[0].vdisplay, false);
 	for (i = 1; i < LAYERS_LEN; i++) {
-		init_layer(drm_fd, &layers[i], output, 100, 100, i % 2);
+		init_layer(context.drm_fd, &layers[i], output, 100, 100, i % 2);
 		layers[i].x = 100 * i;
 		layers[i].y = 100 * i;
 	}
@@ -195,10 +206,10 @@ int main(int argc, char *argv[])
 	for (i = 0; i < LAYERS_LEN; i++) {
 		liftoff_layer_set_property(layers[i].layer, "zpos", i);
 
-		draw_layer(drm_fd, &layers[i]);
+		draw_layer(context.drm_fd, &layers[i]);
 	}
 
-	draw();
+	draw(&context);
 
 	for (i = 0; i < 120; i++) {
 		drmEventContext drm_event = {
@@ -206,7 +217,7 @@ int main(int argc, char *argv[])
 			.page_flip_handler2 = page_flip_handler,
 		};
 		struct pollfd pfd = {
-			.fd = drm_fd,
+			.fd = context.drm_fd,
 			.events = POLLIN,
 		};
 
@@ -216,15 +227,15 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 
-		drmHandleEvent(drm_fd, &drm_event);
+		drmHandleEvent(context.drm_fd, &drm_event);
 	}
 
 	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
 		liftoff_layer_destroy(layers[i].layer);
 	}
 	liftoff_output_destroy(output);
-	drmModeFreeCrtc(crtc);
-	drmModeFreeConnector(connector);
+	drmModeFreeCrtc(context.crtc);
+	drmModeFreeConnector(context.connector);
 	liftoff_display_destroy(display);
 	return 0;
 }

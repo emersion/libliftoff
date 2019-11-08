@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
 	int drm_fd;
 	struct liftoff_display *display;
 	drmModeRes *drm_res;
-	drmModeConnector *connector;
 	drmModeCrtc *crtcs[MAX_OUTPUTS], *crtc;
+	drmModeConnector *connectors[MAX_OUTPUTS], *connector;
 	struct liftoff_output *outputs[MAX_OUTPUTS], *output;
 	struct liftoff_layer *layers[MAX_OUTPUTS * LAYERS_PER_OUTPUT];
 	size_t outputs_len, layers_len;
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 		}
 
 		crtc = pick_crtc(drm_fd, drm_res, connector);
-		if (crtc == NULL || !crtc->mode_valid) {
+		if (crtc == NULL) {
 			drmModeFreeConnector(connector);
 			continue;
 		}
@@ -121,8 +121,7 @@ int main(int argc, char *argv[])
 		printf("Using connector %d, CRTC %d\n", connector->connector_id,
 		       crtc->crtc_id);
 
-		drmModeFreeConnector(connector);
-
+		connectors[outputs_len] = connector;
 		crtcs[outputs_len] = crtc;
 		outputs[outputs_len] = output;
 		outputs_len++;
@@ -137,11 +136,12 @@ int main(int argc, char *argv[])
 	layers_len = 0;
 	for (i = 0; i < outputs_len; i++) {
 		output = outputs[i];
+		connector = connectors[i];
 		crtc = crtcs[i];
 
 		layers[layers_len++] = add_layer(drm_fd, output, 0, 0,
-						 crtc->mode.hdisplay,
-						 crtc->mode.vdisplay, false);
+						 connector->modes[0].hdisplay,
+						 connector->modes[0].vdisplay, false);
 		for (j = 1; j < LAYERS_PER_OUTPUT; j++) {
 			layers[layers_len++] = add_layer(drm_fd, output,
 							 100 * j, 100 * j,
@@ -159,7 +159,11 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK, NULL);
+	for (i = 0; i < outputs_len; i++) {
+		set_global_properties(drm_fd, req, connectors[i], crtcs[i], &connectors[i]->modes[0]);
+	}
+
+	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK | DRM_MODE_ATOMIC_ALLOW_MODESET, NULL);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
 		return false;
@@ -178,6 +182,7 @@ int main(int argc, char *argv[])
 	}
 	for (i = 0; i < outputs_len; i++) {
 		liftoff_output_destroy(outputs[i]);
+		drmModeFreeConnector(connectors[i]);
 		drmModeFreeCrtc(crtcs[i]);
 	}
 	liftoff_display_destroy(display);
