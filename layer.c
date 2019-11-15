@@ -117,3 +117,21 @@ void layer_mark_clean(struct liftoff_layer *layer)
 		layer->props[i].changed = false;
 	}
 }
+
+void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
+	struct liftoff_layer_property *prop;
+
+	/* TODO: also bump priority when updating other
+	 * properties */
+	prop = layer_get_property(layer, "FB_ID");
+	if (prop->changed) {
+		layer->pending_priority++;
+	}
+
+	if (make_current) {
+		layer->current_priority = layer->pending_priority;
+		layer->pending_priority = 0;
+		liftoff_log(LIFTOFF_DEBUG, "Layer %p has priority %d",
+			    (void *)layer, layer->current_priority);
+	}
+}

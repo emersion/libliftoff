@@ -5,6 +5,10 @@
 #include "list.h"
 #include "log.h"
 
+/* Layer priority is assigned depending on the number of updates during a
+ * given number of page-flips */
+#define LIFTOFF_PRIORITY_PERIOD 60
+
 struct liftoff_display {
 	int drm_fd;
 
@@ -13,6 +17,8 @@ struct liftoff_display {
 
 	uint32_t *crtcs;
 	size_t crtcs_len;
+
+	int page_flip_counter;
 };
 
 struct liftoff_output {
@@ -34,6 +40,8 @@ struct liftoff_layer {
 	size_t props_len;
 
 	struct liftoff_plane *plane;
+
+	int current_priority, pending_priority;
 };
 
 struct liftoff_layer_property {
@@ -71,6 +79,7 @@ struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
 bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
 void layer_mark_clean(struct liftoff_layer *layer);
+void layer_update_priority(struct liftoff_layer *layer, bool make_current);
 
 struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id);
 void plane_destroy(struct liftoff_plane *plane);

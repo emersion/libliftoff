@@ -550,6 +550,25 @@ static void mark_layers_clean(struct liftoff_display *display)
 	}
 }
 
+static void update_layers_priority(struct liftoff_display *display)
+{
+	struct liftoff_output *output;
+	struct liftoff_layer *layer;
+
+	display->page_flip_counter++;
+	bool period_elapsed =
+		display->page_flip_counter >= LIFTOFF_PRIORITY_PERIOD;
+	if (period_elapsed) {
+		display->page_flip_counter = 0;
+	}
+
+	liftoff_list_for_each(output, &display->outputs, link) {
+		liftoff_list_for_each(layer, &output->layers, link) {
+			layer_update_priority(layer, period_elapsed);
+		}
+	}
+}
+
 bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *req)
 {
 	struct liftoff_output *output;
@@ -559,6 +578,8 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	struct alloc_step step;
 	size_t i;
 	bool compatible;
+
+	update_layers_priority(display);
 
 	if (reuse_previous_alloc(display, req)) {
 		liftoff_log(LIFTOFF_DEBUG, "Re-using previous plane allocation");
