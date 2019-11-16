@@ -2,6 +2,7 @@
 #include <drm_fourcc.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <xf86drm.h>
 #include "common.h"
@@ -77,6 +78,79 @@ void disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res, uint32_t crtc_id)
 		drmModeSetCrtc(drm_fd, drm_res->crtcs[i],
 			0, 0, 0, NULL, 0, NULL);
 	}
+}
+
+static uint32_t find_drm_object_property_by_name(int drm_fd, drmModeObjectPropertiesPtr props,
+						 const char *name)
+{
+	unsigned int i;
+	drmModePropertyRes *prop;
+	uint32_t ret = UINT32_MAX;
+	bool found = false;
+
+	for (i = 0; !found && i < props->count_props; i++) {
+		prop = drmModeGetProperty(drm_fd, props->props[i]);
+		if (strcmp(prop->name, name) == 0) {
+			ret = prop->prop_id;
+			found = true;
+		}
+		drmModeFreeProperty(prop);
+	}
+
+	return ret;
+}
+
+bool set_global_properties(int drm_fd, drmModeAtomicReq *req,
+			   const drmModeConnector *connector, const drmModeCrtc *crtc,
+			   const drmModeModeInfo *mode)
+{
+	bool ok = true;
+
+	drmModeObjectPropertiesPtr connector_props = drmModeObjectGetProperties(drm_fd,
+										connector->connector_id,
+										DRM_MODE_OBJECT_CONNECTOR);
+
+	drmModeObjectPropertiesPtr crtc_props = drmModeObjectGetProperties(drm_fd,
+									   crtc->crtc_id,
+									   DRM_MODE_OBJECT_CRTC);
+
+	assert(connector_props != NULL);
+	assert(crtc_props != NULL);
+
+	uint32_t connector_crtc_prop = find_drm_object_property_by_name(drm_fd, connector_props, "CRTC_ID");
+	uint32_t crtc_active_prop = find_drm_object_property_by_name(drm_fd, crtc_props, "ACTIVE");
+	uint32_t crtc_mode_id_prop = find_drm_object_property_by_name(drm_fd, crtc_props, "MODE_ID");
+	uint32_t mode_blob_id = UINT32_MAX;
+
+	assert(connector_crtc_prop != UINT32_MAX);
+	assert(crtc_active_prop != UINT32_MAX);
+	assert(crtc_mode_id_prop != UINT32_MAX);
+
+	/* connector::CRTC_ID */
+	if (drmModeAtomicAddProperty(req, connector->connector_id, connector_crtc_prop, crtc->crtc_id) < 0) {
+		ok = false;
+		goto out;
+	}
+
+	/* crtc::ACTIVE */
+	if (drmModeAtomicAddProperty(req, crtc->crtc_id, crtc_active_prop, 1) < 0) {
+		ok = false;
+		goto out;
+	}
+
+	/* crtc::MODE_ID */
+	if (drmModeCreatePropertyBlob(drm_fd, mode, sizeof(*mode), &mode_blob_id) < 0 ||
+	    drmModeAtomicAddProperty(req, crtc->crtc_id, crtc_mode_id_prop, mode_blob_id) < 0) {
+		ok = false;
+		goto out;
+	}
+
+out:
+	/* free stuff */
+	drmModeFreeObjectProperties(crtc_props);
+	drmModeFreeObjectProperties(connector_props);
+
+	return ok;
 }
 
 bool dumb_fb_init(struct dumb_fb *fb, int drm_fd, uint32_t format,
