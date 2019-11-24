@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 	size_t i, j;
 	int plane_type;
 	int drm_fd;
-	struct liftoff_display *display;
+	struct liftoff_device *device;
 	struct liftoff_output *output;
 	struct liftoff_layer *layers[MAX_LAYERS];
 	drmModeAtomicReq *req;
@@ -73,10 +73,10 @@ int main(int argc, char *argv[])
 	}
 
 	drm_fd = liftoff_mock_drm_open();
-	display = liftoff_display_create(drm_fd);
-	assert(display != NULL);
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
 
-	output = liftoff_output_create(display, liftoff_mock_drm_crtc_id);
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 
 	for (i = 0; i < layers_len; i++) {
 		/* Planes don't intersect, so the library can arrange them in
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_display_apply(display, req);
+	ok = liftoff_device_apply(device, req);
 	assert(ok);
 	drmModeAtomicFree(req);
 
@@ -115,6 +115,6 @@ int main(int argc, char *argv[])
 	printf("With 20µs per atomic test commit, plane allocation would take "
 	       "%fms\n", dur_ms + liftoff_mock_commit_count * 0.02);
 
-	liftoff_display_destroy(display);
+	liftoff_device_destroy(device);
 	close(drm_fd);
 }

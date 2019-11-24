@@ -560,7 +560,7 @@ static void run_test(struct test_layer *test_layers)
 	struct liftoff_mock_plane *mock_plane;
 	struct test_layer *test_layer;
 	int drm_fd;
-	struct liftoff_display *display;
+	struct liftoff_device *device;
 	struct liftoff_output *output;
 	struct liftoff_layer *layers[64];
 	drmModeAtomicReq *req;
@@ -572,10 +572,10 @@ static void run_test(struct test_layer *test_layers)
 	}
 
 	drm_fd = liftoff_mock_drm_open();
-	display = liftoff_display_create(drm_fd);
-	assert(display != NULL);
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
 
-	output = liftoff_output_create(display, liftoff_mock_drm_crtc_id);
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	for (i = 0; test_layers[i].width > 0; i++) {
 		test_layer = &test_layers[i];
 		layers[i] = add_layer(output, test_layer->x, test_layer->y,
@@ -596,7 +596,7 @@ static void run_test(struct test_layer *test_layers)
 	}
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_display_apply(display, req);
+	ok = liftoff_device_apply(device, req);
 	assert(ok);
 	drmModeAtomicFree(req);
 
@@ -631,7 +631,7 @@ static void run_test(struct test_layer *test_layers)
 	}
 	assert(ok);
 
-	liftoff_display_destroy(display);
+	liftoff_device_destroy(device);
 	close(drm_fd);
 }
 
@@ -639,7 +639,7 @@ static void test_basic(void)
 {
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
-	struct liftoff_display *display;
+	struct liftoff_device *device;
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
@@ -648,21 +648,21 @@ static void test_basic(void)
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
 
 	drm_fd = liftoff_mock_drm_open();
-	display = liftoff_display_create(drm_fd);
-	assert(display != NULL);
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
 
-	output = liftoff_output_create(display, liftoff_mock_drm_crtc_id);
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = add_layer(output, 0, 0, 1920, 1080);
 
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_display_apply(display, req);
+	ok = liftoff_device_apply(device, req);
 	assert(ok);
 	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
 	drmModeAtomicFree(req);
 
-	liftoff_display_destroy(display);
+	liftoff_device_destroy(device);
 	close(drm_fd);
 }
 

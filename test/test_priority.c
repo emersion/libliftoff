@@ -32,7 +32,7 @@ static struct liftoff_layer *add_layer(struct liftoff_output *output,
 int main(int argc, char *argv[]) {
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
-	struct liftoff_display *display;
+	struct liftoff_device *device;
 	struct liftoff_output *output;
 	struct liftoff_layer *layers[2], *layer;
 	uint32_t fbs[2];
@@ -46,10 +46,10 @@ int main(int argc, char *argv[]) {
 	liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_CURSOR);
 
 	drm_fd = liftoff_mock_drm_open();
-	display = liftoff_display_create(drm_fd);
-	assert(display != NULL);
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
 
-	output = liftoff_output_create(display, liftoff_mock_drm_crtc_id);
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layers[0] = add_layer(output, 0, 0, 1920, 1080);
 	layers[1] = add_layer(output, 0, 0, 1920, 1080);
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 
 			liftoff_layer_set_property(layer, "FB_ID", fbs[j % 2]);
 
-			ok = liftoff_display_apply(display, req);
+			ok = liftoff_device_apply(device, req);
 			assert(ok);
 		}
 
@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
 		drmModeAtomicFree(req);
 	}
 
-	liftoff_display_destroy(display);
+	liftoff_device_destroy(device);
 	close(drm_fd);
 
 	return 0;

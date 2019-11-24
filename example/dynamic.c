@@ -28,7 +28,7 @@ struct example_layer {
 };
 
 static int drm_fd = -1;
-static struct liftoff_display *display = NULL;
+static struct liftoff_device *device = NULL;
 static struct example_layer layers[LAYERS_LEN] = {0};
 static size_t active_layer_idx = 2;
 
@@ -107,8 +107,8 @@ static bool draw(void)
 	draw_layer(drm_fd, active_layer);
 
 	req = drmModeAtomicAlloc();
-	if (!liftoff_display_apply(display, req)) {
-		perror("liftoff_display_commit");
+	if (!liftoff_device_apply(device, req)) {
+		perror("liftoff_device_commit");
 		return false;
 	}
 
@@ -159,9 +159,9 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	display = liftoff_display_create(drm_fd);
-	if (display == NULL) {
-		perror("liftoff_display_create");
+	device = liftoff_device_create(drm_fd);
+	if (device == NULL) {
+		perror("liftoff_device_create");
 		return 1;
 	}
 
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 	connector = pick_connector(drm_fd, drm_res);
 	crtc = pick_crtc(drm_fd, drm_res, connector);
 	disable_all_crtcs_except(drm_fd, drm_res, crtc->crtc_id);
-	output = liftoff_output_create(display, crtc->crtc_id);
+	output = liftoff_output_create(device, crtc->crtc_id);
 	drmModeFreeResources(drm_res);
 
 	if (connector == NULL) {
@@ -225,6 +225,6 @@ int main(int argc, char *argv[])
 	liftoff_output_destroy(output);
 	drmModeFreeCrtc(crtc);
 	drmModeFreeConnector(connector);
-	liftoff_display_destroy(display);
+	liftoff_device_destroy(device);
 	return 0;
 }

@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 	const char *test_name;
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
-	struct liftoff_display *display;
+	struct liftoff_device *device;
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
@@ -51,10 +51,10 @@ int main(int argc, char *argv[]) {
 	liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_CURSOR);
 
 	drm_fd = liftoff_mock_drm_open();
-	display = liftoff_display_create(drm_fd);
-	assert(display != NULL);
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
 
-	output = liftoff_output_create(display, liftoff_mock_drm_crtc_id);
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = add_layer(output, 0, 0, 1920, 1080);
 	/* Layer incompatible with all planes */
 	add_layer(output, 0, 0, 256, 256);
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_display_apply(display, req);
+	ok = liftoff_device_apply(device, req);
 	assert(ok);
 	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
 	drmModeAtomicFree(req);
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	ok = liftoff_display_apply(display, req);
+	ok = liftoff_device_apply(device, req);
 	assert(ok);
 	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
 	if (want_reuse_prev_alloc) {
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 
 	drmModeAtomicFree(req);
 
-	liftoff_display_destroy(display);
+	liftoff_device_destroy(device);
 	close(drm_fd);
 
 	return 0;
