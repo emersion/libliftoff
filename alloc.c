@@ -189,7 +189,7 @@ static bool has_allocated_layer_over(struct liftoff_output *output,
 	}
 
 	i = -1;
-	liftoff_list_for_each(other_plane, &output->display->planes, link) {
+	liftoff_list_for_each(other_plane, &output->device->planes, link) {
 		i++;
 		if (i >= (ssize_t)step->plane_idx) {
 			break;
@@ -230,7 +230,7 @@ static bool has_allocated_plane_under(struct liftoff_output *output,
 	plane = liftoff_container_of(step->plane_link, plane, link);
 
 	i = -1;
-	liftoff_list_for_each(other_plane, &output->display->planes, link) {
+	liftoff_list_for_each(other_plane, &output->device->planes, link) {
 		i++;
 		if (i >= (ssize_t)step->plane_idx) {
 			break;
@@ -343,12 +343,12 @@ bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 	return true;
 }
 
-static bool display_test_commit(struct liftoff_display *display,
+static bool device_test_commit(struct liftoff_device *device,
 				drmModeAtomicReq *req, bool *compatible)
 {
 	int ret;
 
-	ret = drmModeAtomicCommit(display->drm_fd, req,
+	ret = drmModeAtomicCommit(device->drm_fd, req,
 				  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
 	if (ret == 0) {
 		*compatible = true;
@@ -366,7 +366,7 @@ static bool display_test_commit(struct liftoff_display *display,
 bool output_choose_layers(struct liftoff_output *output,
 			  struct alloc_result *result, struct alloc_step *step)
 {
-	struct liftoff_display *display;
+	struct liftoff_device *device;
 	struct liftoff_plane *plane;
 	struct liftoff_layer *layer;
 	int cursor;
@@ -374,9 +374,9 @@ bool output_choose_layers(struct liftoff_output *output,
 	bool compatible;
 	struct alloc_step next_step;
 
-	display = output->display;
+	device = output->device;
 
-	if (step->plane_link == &display->planes) { /* Allocation finished */
+	if (step->plane_link == &device->planes) { /* Allocation finished */
 		if (step->score > result->best_score &&
 		    check_alloc_valid(result, step)) {
 			/* We found a better allocation */
@@ -437,7 +437,7 @@ bool output_choose_layers(struct liftoff_output *output,
 			continue;
 		}
 
-		if (!display_test_commit(display, result->req, &compatible)) {
+		if (!device_test_commit(device, result->req, &compatible)) {
 			return false;
 		}
 		if (compatible) {
@@ -465,7 +465,7 @@ skip:
 	return true;
 }
 
-static bool apply_current(struct liftoff_display *display,
+static bool apply_current(struct liftoff_device *device,
 			  drmModeAtomicReq *req)
 {
 	struct liftoff_plane *plane;
@@ -474,7 +474,7 @@ static bool apply_current(struct liftoff_display *display,
 
 	cursor = drmModeAtomicGetCursor(req);
 
-	liftoff_list_for_each(plane, &display->planes, link) {
+	liftoff_list_for_each(plane, &device->planes, link) {
 		if (!plane_apply(plane, plane->layer, req, &compatible)) {
 			drmModeAtomicSetCursor(req, cursor);
 			return false;
@@ -509,7 +509,7 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 	return false;
 }
 
-static bool reuse_previous_alloc(struct liftoff_display *display,
+static bool reuse_previous_alloc(struct liftoff_device *device,
 				 drmModeAtomicReq *req)
 {
 	struct liftoff_output *output;
@@ -517,7 +517,7 @@ static bool reuse_previous_alloc(struct liftoff_display *display,
 	int cursor;
 	bool compatible;
 
-	liftoff_list_for_each(output, &display->outputs, link) {
+	liftoff_list_for_each(output, &device->outputs, link) {
 		liftoff_list_for_each(layer, &output->layers, link) {
 			if (layer_needs_realloc(layer)) {
 				return false;
@@ -527,10 +527,10 @@ static bool reuse_previous_alloc(struct liftoff_display *display,
 
 	cursor = drmModeAtomicGetCursor(req);
 
-	if (!apply_current(display, req)) {
+	if (!apply_current(device, req)) {
 		return false;
 	}
-	if (!display_test_commit(display, req, &compatible) || !compatible) {
+	if (!device_test_commit(device, req, &compatible) || !compatible) {
 		drmModeAtomicSetCursor(req, cursor);
 		return false;
 	}
@@ -538,38 +538,38 @@ static bool reuse_previous_alloc(struct liftoff_display *display,
 	return true;
 }
 
-static void mark_layers_clean(struct liftoff_display *display)
+static void mark_layers_clean(struct liftoff_device *device)
 {
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 
-	liftoff_list_for_each(output, &display->outputs, link) {
+	liftoff_list_for_each(output, &device->outputs, link) {
 		liftoff_list_for_each(layer, &output->layers, link) {
 			layer_mark_clean(layer);
 		}
 	}
 }
 
-static void update_layers_priority(struct liftoff_display *display)
+static void update_layers_priority(struct liftoff_device *device)
 {
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 
-	display->page_flip_counter++;
+	device->page_flip_counter++;
 	bool period_elapsed =
-		display->page_flip_counter >= LIFTOFF_PRIORITY_PERIOD;
+		device->page_flip_counter >= LIFTOFF_PRIORITY_PERIOD;
 	if (period_elapsed) {
-		display->page_flip_counter = 0;
+		device->page_flip_counter = 0;
 	}
 
-	liftoff_list_for_each(output, &display->outputs, link) {
+	liftoff_list_for_each(output, &device->outputs, link) {
 		liftoff_list_for_each(layer, &output->layers, link) {
 			layer_update_priority(layer, period_elapsed);
 		}
 	}
 }
 
-bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *req)
+bool liftoff_device_apply(struct liftoff_device *device, drmModeAtomicReq *req)
 {
 	struct liftoff_output *output;
 	struct liftoff_plane *plane;
@@ -579,15 +579,15 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	size_t i;
 	bool compatible;
 
-	update_layers_priority(display);
+	update_layers_priority(device);
 
-	if (reuse_previous_alloc(display, req)) {
+	if (reuse_previous_alloc(device, req)) {
 		liftoff_log(LIFTOFF_DEBUG, "Re-using previous plane allocation");
 		return true;
 	}
 
 	/* Unset all existing plane and layer mappings. */
-	liftoff_list_for_each(plane, &display->planes, link) {
+	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer != NULL) {
 			plane->layer->plane = NULL;
 			plane->layer = NULL;
@@ -596,7 +596,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 
 	/* Disable all planes. Do it before building mappings to make sure not
 	   to hit bandwidth limits because too many planes are enabled. */
-	liftoff_list_for_each(plane, &display->planes, link) {
+	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer == NULL) {
 			liftoff_log(LIFTOFF_DEBUG,
 				    "Disabling plane %d", plane->id);
@@ -608,7 +608,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	}
 
 	result.req = req;
-	result.planes_len = liftoff_list_length(&display->planes);
+	result.planes_len = liftoff_list_length(&device->planes);
 
 	step.alloc = malloc(result.planes_len * sizeof(*step.alloc));
 	result.best = malloc(result.planes_len * sizeof(*result.best));
@@ -622,7 +622,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	 * issues? Also: be fair when mapping planes to outputs, don't give all
 	 * planes to a single output. Also: don't treat each output separately,
 	 * allocate planes for all outputs at once. */
-	liftoff_list_for_each(output, &display->outputs, link) {
+	liftoff_list_for_each(output, &device->outputs, link) {
 		/* For each plane, try to find a layer. Don't do it the other
 		 * way around (ie. for each layer, try to find a plane) because
 		 * some drivers want user-space to enable the primary plane
@@ -636,7 +636,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 		if (output->composition_layer != NULL) {
 			result.non_composition_layers_len--;
 		}
-		step.plane_link = display->planes.next;
+		step.plane_link = device->planes.next;
 		step.plane_idx = 0;
 		step.score = 0;
 		step.last_layer_zpos = INT_MAX;
@@ -651,7 +651,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 
 		/* Apply the best allocation */
 		i = 0;
-		liftoff_list_for_each(plane, &display->planes, link) {
+		liftoff_list_for_each(plane, &device->planes, link) {
 			layer = result.best[i];
 			i++;
 			if (layer == NULL) {
@@ -668,7 +668,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 			layer->plane = plane;
 		}
 
-		if (!apply_current(display, req)) {
+		if (!apply_current(device, req)) {
 			return false;
 		}
 	}
@@ -676,7 +676,7 @@ bool liftoff_display_apply(struct liftoff_display *display, drmModeAtomicReq *re
 	free(step.alloc);
 	free(result.best);
 
-	mark_layers_clean(display);
+	mark_layers_clean(device);
 
 	return true;
 }

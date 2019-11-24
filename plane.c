@@ -3,7 +3,7 @@
 #include <string.h>
 #include "private.h"
 
-static int guess_plane_zpos_from_type(struct liftoff_display *display,
+static int guess_plane_zpos_from_type(struct liftoff_device *device,
 				      uint32_t plane_id, uint32_t type)
 {
 	struct liftoff_plane *primary;
@@ -16,10 +16,10 @@ static int guess_plane_zpos_from_type(struct liftoff_display *display,
 	case DRM_PLANE_TYPE_CURSOR:
 		return 2;
 	case DRM_PLANE_TYPE_OVERLAY:
-		if (liftoff_list_empty(&display->planes)) {
+		if (liftoff_list_empty(&device->planes)) {
 			return 0; /* No primary plane, shouldn't happen */
 		}
-		primary = liftoff_container_of(display->planes.next,
+		primary = liftoff_container_of(device->planes.next,
 					       primary, link);
 		if (plane_id < primary->id) {
 			return -1;
@@ -30,7 +30,7 @@ static int guess_plane_zpos_from_type(struct liftoff_display *display,
 	return 0;
 }
 
-struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
+struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 {
 	struct liftoff_plane *plane, *cur;
 	drmModePlane *drm_plane;
@@ -47,7 +47,7 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 		return NULL;
 	}
 
-	drm_plane = drmModeGetPlane(display->drm_fd, id);
+	drm_plane = drmModeGetPlane(device->drm_fd, id);
 	if (drm_plane == NULL) {
 		liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetPlane");
 		return NULL;
@@ -56,7 +56,7 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 	plane->possible_crtcs = drm_plane->possible_crtcs;
 	drmModeFreePlane(drm_plane);
 
-	drm_props = drmModeObjectGetProperties(display->drm_fd, id,
+	drm_props = drmModeObjectGetProperties(device->drm_fd, id,
 					       DRM_MODE_OBJECT_PLANE);
 	if (drm_props == NULL) {
 		liftoff_log_errno(LIFTOFF_ERROR, "drmModeObjectGetProperties");
@@ -70,7 +70,7 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 		return NULL;
 	}
 	for (i = 0; i < drm_props->count_props; i++) {
-		drm_prop = drmModeGetProperty(display->drm_fd,
+		drm_prop = drmModeGetProperty(device->drm_fd,
 					      drm_props->props[i]);
 		if (drm_prop == NULL) {
 			liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetProperty");
@@ -101,7 +101,7 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 		free(plane);
 		return NULL;
 	} else if (!has_zpos) {
-		plane->zpos = guess_plane_zpos_from_type(display, plane->id,
+		plane->zpos = guess_plane_zpos_from_type(device, plane->id,
 							 plane->type);
 	}
 
@@ -110,9 +110,9 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 	 * far from the primary planes, then planes closer and closer to the
 	 * primary plane. */
 	if (plane->type == DRM_PLANE_TYPE_PRIMARY) {
-		liftoff_list_insert(&display->planes, &plane->link);
+		liftoff_list_insert(&device->planes, &plane->link);
 	} else {
-		liftoff_list_for_each(cur, &display->planes, link) {
+		liftoff_list_for_each(cur, &device->planes, link) {
 			if (cur->type != DRM_PLANE_TYPE_PRIMARY &&
 			    plane->zpos >= cur->zpos) {
 				liftoff_list_insert(cur->link.prev, &plane->link);
@@ -121,7 +121,7 @@ struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id)
 		}
 
 		if (plane->link.next == NULL) { /* not inserted */
-			liftoff_list_insert(display->planes.prev, &plane->link);
+			liftoff_list_insert(device->planes.prev, &plane->link);
 		}
 	}
 

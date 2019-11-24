@@ -9,7 +9,7 @@
  * given number of page-flips */
 #define LIFTOFF_PRIORITY_PERIOD 60
 
-struct liftoff_display {
+struct liftoff_device {
 	int drm_fd;
 
 	struct liftoff_list planes; /* liftoff_plane.link */
@@ -22,10 +22,10 @@ struct liftoff_display {
 };
 
 struct liftoff_output {
-	struct liftoff_display *display;
+	struct liftoff_device *device;
 	uint32_t crtc_id;
 	size_t crtc_index;
-	struct liftoff_list link; /* liftoff_display.outputs */
+	struct liftoff_list link; /* liftoff_device.outputs */
 
 	struct liftoff_layer *composition_layer;
 
@@ -56,7 +56,7 @@ struct liftoff_plane {
 	uint32_t type;
 	int zpos; /* greater values mean closer to the eye */
 	/* TODO: formats */
-	struct liftoff_list link; /* liftoff_display.planes */
+	struct liftoff_list link; /* liftoff_device.planes */
 
 	struct liftoff_plane_property *props;
 	size_t props_len;
@@ -81,7 +81,7 @@ bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
 void layer_mark_clean(struct liftoff_layer *layer);
 void layer_update_priority(struct liftoff_layer *layer, bool make_current);
 
-struct liftoff_plane *plane_create(struct liftoff_display *display, uint32_t id);
+struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id);
 void plane_destroy(struct liftoff_plane *plane);
 struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
 						  const char *name);
