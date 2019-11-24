@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 	int drm_fd;
 	struct liftoff_device *device;
 	struct liftoff_output *output;
-	struct liftoff_layer *layer;
+	struct liftoff_layer *layer, *other_layer;
 	drmModeAtomicReq *req;
 	bool ok;
 	size_t commit_count;
@@ -56,7 +56,8 @@ int main(int argc, char *argv[]) {
 
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = add_layer(output, 0, 0, 1920, 1080);
-	/* Layer incompatible with all planes */
+	/* Layers incompatible with all planes */
+	other_layer = add_layer(output, 0, 0, 256, 256);
 	add_layer(output, 0, 0, 256, 256);
 
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
@@ -83,8 +84,12 @@ int main(int argc, char *argv[]) {
 	} else if (strcmp(test_name, "fb") == 0) {
 		liftoff_layer_set_property(layer, "FB_ID",
 					   liftoff_mock_drm_create_fb(layer));
-	} else if (strcmp(test_name, "new-layer") == 0) {
+	} else if (strcmp(test_name, "add-layer") == 0) {
 		add_layer(output, 0, 0, 256, 256);
+		want_reuse_prev_alloc = false;
+	} else if (strcmp(test_name, "remove-layer") == 0) {
+		liftoff_layer_destroy(other_layer);
+		other_layer = NULL;
 		want_reuse_prev_alloc = false;
 	} else {
 		fprintf(stderr, "no such test: %s\n", test_name);
@@ -95,8 +100,12 @@ int main(int argc, char *argv[]) {
 	assert(ok);
 	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
 	if (want_reuse_prev_alloc) {
+		/* The library should perform only one TEST_ONLY commit with the
+		 * previous plane allocation. */
 		assert(liftoff_mock_commit_count == commit_count + 1);
 	} else {
+		/* Since there are at least two planes, the library should
+		 * perform more than one TEST_ONLY commit. */
 		assert(liftoff_mock_commit_count > commit_count + 1);
 	}
 

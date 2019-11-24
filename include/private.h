@@ -30,6 +30,7 @@ struct liftoff_output {
 	struct liftoff_layer *composition_layer;
 
 	struct liftoff_list layers; /* liftoff_layer.link */
+	bool layers_changed; /* layer added or removed */
 };
 
 struct liftoff_layer {

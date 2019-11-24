@@ -518,6 +518,10 @@ static bool reuse_previous_alloc(struct liftoff_device *device,
 	bool compatible;
 
 	liftoff_list_for_each(output, &device->outputs, link) {
+		if (output->layers_changed) {
+			return false;
+		}
+
 		liftoff_list_for_each(layer, &output->layers, link) {
 			if (layer_needs_realloc(layer)) {
 				return false;
@@ -544,6 +548,8 @@ static void mark_layers_clean(struct liftoff_device *device)
 	struct liftoff_layer *layer;
 
 	liftoff_list_for_each(output, &device->outputs, link) {
+		output->layers_changed = false;
+
 		liftoff_list_for_each(layer, &output->layers, link) {
 			layer_mark_clean(layer);
 		}

@@ -44,7 +44,8 @@ tests = {
 	'dynamic': [
 		'same',
 		'fb',
-		'new-layer',
+		'add-layer',
+		'remove-layer',
 	],
 	'priority': [
 		#'basic',

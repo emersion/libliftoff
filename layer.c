@@ -13,11 +13,13 @@ struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output)
 	}
 	layer->output = output;
 	liftoff_list_insert(output->layers.prev, &layer->link);
+	output->layers_changed = true;
 	return layer;
 }
 
 void liftoff_layer_destroy(struct liftoff_layer *layer)
 {
+	layer->output->layers_changed = true;
 	if (layer->output->composition_layer == layer) {
 		layer->output->composition_layer = NULL;
 	}
