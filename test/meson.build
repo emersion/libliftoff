@@ -24,6 +24,7 @@ bench_exe = executable(
 tests = {
 	'alloc': [
 		'basic',
+		'empty',
 		'simple-1x',
 		'simple-1x-fail',
 		'simple-3x',

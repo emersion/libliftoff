@@ -63,6 +63,9 @@ static const size_t test_setup_len = sizeof(test_setup) / sizeof(test_setup[0]);
 
 static struct test_case tests[] = {
 	{
+		.name = "empty",
+	},
+	{
 		.name = "simple-1x-fail",
 		.layers = {
 			{
@@ -631,6 +634,7 @@ static void run_test(struct test_layer *test_layers)
 	}
 	assert(ok);
 
+	liftoff_output_destroy(output);
 	liftoff_device_destroy(device);
 	close(drm_fd);
 }
