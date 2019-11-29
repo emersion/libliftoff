@@ -28,7 +28,7 @@ liftoff_lib = library(
 	meson.project_name(),
 	files(
 		'alloc.c',
-		'display.c',
+		'device.c',
 		'layer.c',
 		'list.c',
 		'log.c',
