@@ -390,7 +390,7 @@ int drmModeAtomicAddProperty(drmModeAtomicReq *req, uint32_t obj_id,
 	req->props[req->cursor].prop_id = prop_id;
 	req->props[req->cursor].value = value;
 	req->cursor++;
-	return 0;
+	return req->cursor;
 }
 
 int drmModeAtomicGetCursor(drmModeAtomicReq *req)
