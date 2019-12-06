@@ -130,6 +130,9 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 
 void plane_destroy(struct liftoff_plane *plane)
 {
+	if (plane->layer != NULL) {
+		plane->layer->plane = NULL;
+	}
 	liftoff_list_remove(&plane->link);
 	free(plane->props);
 	free(plane);
