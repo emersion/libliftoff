@@ -591,6 +591,8 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 		return true;
 	}
 
+	output_log_layers(output);
+
 	/* Unset all existing plane and layer mappings. */
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer != NULL && plane->layer->output == output) {

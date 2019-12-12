@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -48,4 +49,19 @@ void liftoff_output_set_composition_layer(struct liftoff_output *output,
 		output->layers_changed = true;
 	}
 	output->composition_layer = layer;
+}
+
+void output_log_layers(struct liftoff_output *output) {
+	struct liftoff_layer *layer;
+	size_t i;
+
+	liftoff_log(LIFTOFF_DEBUG, "Layers on CRTC %"PRIu32":", output->crtc_id);
+	liftoff_list_for_each(layer, &output->layers, link) {
+		liftoff_log(LIFTOFF_DEBUG, "  Layer %p:", (void *)layer);
+		for (i = 0; i < layer->props_len; i++) {
+			liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIu64,
+				    layer->props[i].name,
+				    layer->props[i].value);
+		}
+	}
 }
