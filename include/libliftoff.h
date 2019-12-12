@@ -59,8 +59,8 @@ uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer);
 
 enum liftoff_log_importance {
 	LIFTOFF_SILENT,
-	LIFTOFF_DEBUG,
 	LIFTOFF_ERROR,
+	LIFTOFF_DEBUG,
 };
 
 typedef void (*liftoff_log_func)(enum liftoff_log_importance importance,
