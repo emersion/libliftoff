@@ -156,8 +156,6 @@ static bool plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
 {
 	int ret;
 
-	liftoff_log(LIFTOFF_DEBUG, "  Setting %s = %"PRIu64,
-		    prop->name, value);
 	ret = drmModeAtomicAddProperty(req, plane->id, prop->id, value);
 	if (ret < 0) {
 		liftoff_log_errno(LIFTOFF_ERROR, "drmModeAtomicAddProperty");
