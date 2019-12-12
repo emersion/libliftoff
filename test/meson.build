@@ -47,6 +47,7 @@ tests = {
 		'fb',
 		'add-layer',
 		'remove-layer',
+		'change-composition-layer',
 	],
 	'priority': [
 		#'basic',

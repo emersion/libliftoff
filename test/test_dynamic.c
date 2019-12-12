@@ -91,6 +91,9 @@ int main(int argc, char *argv[]) {
 		liftoff_layer_destroy(other_layer);
 		other_layer = NULL;
 		want_reuse_prev_alloc = false;
+	} else if (strcmp(test_name, "change-composition-layer") == 0) {
+		liftoff_output_set_composition_layer(output, layer);
+		want_reuse_prev_alloc = false;
 	} else {
 		fprintf(stderr, "no such test: %s\n", test_name);
 		return 1;

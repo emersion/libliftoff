@@ -44,5 +44,8 @@ void liftoff_output_set_composition_layer(struct liftoff_output *output,
 					  struct liftoff_layer *layer)
 {
 	assert(layer->output == output);
+	if (layer != output->composition_layer) {
+		output->layers_changed = true;
+	}
 	output->composition_layer = layer;
 }
