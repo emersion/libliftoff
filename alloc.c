@@ -415,7 +415,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		    plane->id, step->plane_idx + 1, result->planes_len);
 
 	liftoff_list_for_each(layer, &output->layers, link) {
-		if (layer->plane != NULL) {
+		if (layer->plane != NULL || layer->force_composition) {
 			continue;
 		}
 		if (!check_layer_plane_compatible(step, layer, plane)) {
@@ -496,6 +496,9 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 			continue;
 		}
 		if (strcmp(prop->name, "FB_ID") == 0) {
+			if (layer->force_composition) {
+				return true;
+			}
 			/* TODO: check format/modifier is the same. Check
 			 * previous/next value isn't zero. */
 			continue;

@@ -41,6 +41,7 @@ tests = {
 		'composition-3x',
 		'composition-3x-fail',
 		'composition-3x-partial',
+		'composition-3x-force',
 	],
 	'dynamic': [
 		'same',

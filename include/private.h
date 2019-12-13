@@ -41,6 +41,8 @@ struct liftoff_layer {
 	struct liftoff_layer_property *props;
 	size_t props_len;
 
+	bool force_composition; /* FB needs to be composited */
+
 	struct liftoff_plane *plane;
 
 	int current_priority, pending_priority;

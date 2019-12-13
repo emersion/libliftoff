@@ -34,6 +34,7 @@ struct test_layer {
 	int x, y, width, height;
 	int zpos; /* zero means unset */
 	bool composition;
+	bool force_composited;
 	struct test_plane *compat[64];
 	struct test_plane *result;
 };
@@ -553,6 +554,44 @@ static struct test_case tests[] = {
 			},
 		},
 	},
+	{
+		.name = "composition-3x-force",
+		/* Layers at zpos=1 and zpos=2 could be put on a plane, but
+		 * FB composition is forced on the zpos=2 one. As a result, only
+		 * the layer at zpos=3 can be put into a plane. */
+		.layers = {
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.composition = true,
+				.compat = { PRIMARY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE },
+				.result = NULL,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.force_composited = true,
+				.compat = FIRST_2_SECONDARY_PLANES,
+				.result = NULL,
+			},
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 3,
+				.compat = { CURSOR_PLANE },
+				.result = CURSOR_PLANE,
+			},
+		},
+	},
 };
 
 static void run_test(struct test_layer *test_layers)
@@ -589,6 +628,9 @@ static void run_test(struct test_layer *test_layers)
 		}
 		if (test_layer->composition) {
 			liftoff_output_set_composition_layer(output, layers[i]);
+		}
+		if (test_layer->force_composited) {
+			liftoff_layer_set_fb_composited(layers[i]);
 		}
 		for (j = 0; test_layer->compat[j] != NULL; j++) {
 			mock_plane = mock_planes[test_layer->compat[j] -

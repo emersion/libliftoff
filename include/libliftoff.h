@@ -46,11 +46,22 @@ void liftoff_output_set_composition_layer(struct liftoff_output *output,
 struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output);
 void liftoff_layer_destroy(struct liftoff_layer *layer);
 /**
- * Set a property on the layer. Any plane property can be set. If none of the
- * planes support the property, the layer won't be mapped to any plane.
+ * Set a property on the layer. Any plane property can be set (except CRTC_ID).
+ * If none of the planes support the property, the layer won't be mapped to any
+ * plane.
+ *
+ * Setting a zero FB_ID disables the layer.
  */
 void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 				uint64_t value);
+/**
+ * Force composition on this layer. This unsets any previous FB_ID value. To
+ * switch back to direct scan-out, set FB_ID again.
+ *
+ * This can be used when no KMS FB ID is available for this layer but it still
+ * needs to be displayed (e.g. the buffer cannot be imported in KMS).
+ */
+void liftoff_layer_set_fb_composited(struct liftoff_layer *layer);
 /**
  * Retrieve the plane mapped to this layer. Zero is returned if no plane is
  * mapped.

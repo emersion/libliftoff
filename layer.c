@@ -78,6 +78,26 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 	}
 
 	prop->value = value;
+
+	if (strcmp(name, "FB_ID") == 0) {
+		layer->force_composition = false;
+		prop->changed = true;
+	}
+}
+
+void liftoff_layer_set_fb_composited(struct liftoff_layer *layer)
+{
+	struct liftoff_layer_property *prop;
+
+	if (layer->force_composition) {
+		return;
+	}
+
+	liftoff_layer_set_property(layer, "FB_ID", 0);
+	prop = layer_get_property(layer, "FB_ID");
+	prop->changed = true;
+
+	layer->force_composition = true;
 }
 
 uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer)
