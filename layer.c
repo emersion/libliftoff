@@ -149,7 +149,7 @@ void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
 	/* TODO: also bump priority when updating other
 	 * properties */
 	prop = layer_get_property(layer, "FB_ID");
-	if (prop->changed) {
+	if (prop != NULL && prop->changed) {
 		layer->pending_priority++;
 	}
 
