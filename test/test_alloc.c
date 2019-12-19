@@ -712,6 +712,39 @@ static void test_basic(void)
 	close(drm_fd);
 }
 
+/* Checks the library doesn't segfault when a layer is added without any
+ * property set. */
+static void test_no_props(void)
+{
+	struct liftoff_mock_plane *mock_plane;
+	int drm_fd;
+	struct liftoff_device *device;
+	struct liftoff_output *output;
+	struct liftoff_layer *layer;
+	drmModeAtomicReq *req;
+	bool ok;
+
+	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
+
+	drm_fd = liftoff_mock_drm_open();
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
+
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
+	layer = liftoff_layer_create(output);
+
+	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
+
+	req = drmModeAtomicAlloc();
+	ok = liftoff_output_apply(output, req);
+	assert(liftoff_mock_plane_get_layer(mock_plane, req) == NULL);
+	assert(ok);
+	drmModeAtomicFree(req);
+
+	liftoff_device_destroy(device);
+	close(drm_fd);
+}
+
 int main(int argc, char *argv[]) {
 	const char *test_name;
 	size_t i;
@@ -726,6 +759,9 @@ int main(int argc, char *argv[]) {
 
 	if (strcmp(test_name, "basic") == 0) {
 		test_basic();
+		return 0;
+	} else if (strcmp(test_name, "no-props") == 0) {
+		test_no_props();
 		return 0;
 	}
 
