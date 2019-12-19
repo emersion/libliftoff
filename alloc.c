@@ -418,6 +418,9 @@ bool output_choose_layers(struct liftoff_output *output,
 		if (layer->plane != NULL || layer->force_composition) {
 			continue;
 		}
+		if (!layer_has_fb(layer)) {
+			continue; /* no FB set, nothing to display */
+		}
 		if (!check_layer_plane_compatible(step, layer, plane)) {
 			continue;
 		}

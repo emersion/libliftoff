@@ -160,3 +160,10 @@ void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
 			    (void *)layer, layer->current_priority);
 	}
 }
+
+bool layer_has_fb(struct liftoff_layer *layer) {
+	struct liftoff_layer_property *fb_id_prop;
+
+	fb_id_prop = layer_get_property(layer, "FB_ID");
+	return fb_id_prop != NULL && fb_id_prop->value != 0;
+}

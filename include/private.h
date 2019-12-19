@@ -84,6 +84,7 @@ void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
 bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
 void layer_mark_clean(struct liftoff_layer *layer);
 void layer_update_priority(struct liftoff_layer *layer, bool make_current);
+bool layer_has_fb(struct liftoff_layer *layer);
 
 struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id);
 void plane_destroy(struct liftoff_plane *plane);
