@@ -25,6 +25,7 @@ tests = {
 	'alloc': [
 		'basic',
 		'no-props',
+		'zero-fb-id',
 		'empty',
 		'simple-1x',
 		'simple-1x-fail',

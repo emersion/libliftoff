@@ -712,9 +712,9 @@ static void test_basic(void)
 	close(drm_fd);
 }
 
-/* Checks the library doesn't segfault when a layer is added without any
- * property set. */
-static void test_no_props(void)
+/* Checks that the library doesn't allocate a plane for a layer without a
+ * non-zero FB_ID set. */
+static void test_no_fb(bool zero_fb_id)
 {
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
@@ -732,6 +732,9 @@ static void test_no_props(void)
 
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = liftoff_layer_create(output);
+	if (zero_fb_id) {
+		liftoff_layer_set_property(layer, "FB_ID", 0);
+	}
 
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
@@ -761,7 +764,10 @@ int main(int argc, char *argv[]) {
 		test_basic();
 		return 0;
 	} else if (strcmp(test_name, "no-props") == 0) {
-		test_no_props();
+		test_no_fb(false);
+		return 0;
+	} else if (strcmp(test_name, "zero-fb-id") == 0) {
+		test_no_fb(true);
 		return 0;
 	}
 
