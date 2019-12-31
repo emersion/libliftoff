@@ -37,6 +37,10 @@ struct liftoff_output *liftoff_output_create(struct liftoff_device *device,
 
 void liftoff_output_destroy(struct liftoff_output *output)
 {
+	if (output == NULL) {
+		return;
+	}
+
 	liftoff_list_remove(&output->link);
 	free(output);
 }

@@ -70,6 +70,10 @@ void liftoff_device_destroy(struct liftoff_device *device)
 {
 	struct liftoff_plane *plane, *tmp;
 
+	if (device == NULL) {
+		return;
+	}
+
 	close(device->drm_fd);
 	liftoff_list_for_each_safe(plane, tmp, &device->planes, link) {
 		plane_destroy(plane);

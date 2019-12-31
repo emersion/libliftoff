@@ -19,6 +19,10 @@ struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output)
 
 void liftoff_layer_destroy(struct liftoff_layer *layer)
 {
+	if (layer == NULL) {
+		return;
+	}
+
 	layer->output->layers_changed = true;
 	if (layer->plane != NULL) {
 		layer->plane->layer = NULL;
