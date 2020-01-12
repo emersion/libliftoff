@@ -24,17 +24,19 @@ drm = dependency('libdrm')
 
 liftoff_deps = [drm]
 
+liftoff_files = [
+	'alloc.c',
+	'device.c',
+	'layer.c',
+	'list.c',
+	'log.c',
+	'output.c',
+	'plane.c',
+]
+
 liftoff_lib = library(
 	meson.project_name(),
-	files(
-		'alloc.c',
-		'device.c',
-		'layer.c',
-		'list.c',
-		'log.c',
-		'output.c',
-		'plane.c',
-	),
+	files(liftoff_files),
 	include_directories: liftoff_inc,
 	version: meson.project_version(),
 	dependencies: liftoff_deps,
@@ -45,6 +47,21 @@ liftoff = declare_dependency(
 	link_with: liftoff_lib,
 	include_directories: liftoff_inc,
 	dependencies: liftoff_deps,
+)
+
+liftoff_lib_static = static_library(
+	meson.project_name(),
+	files(liftoff_files),
+	include_directories: liftoff_inc,
+	version: meson.project_version(),
+	dependencies: liftoff_deps,
+	install: true,
+)
+
+liftoff_static = declare_dependency(
+	link_with: liftoff_lib_static,
+	dependencies: liftoff_deps,
+	include_directories: liftoff_inc,
 )
 
 pkgconfig = import('pkgconfig')
