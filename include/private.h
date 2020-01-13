@@ -78,6 +78,9 @@ struct liftoff_rect {
 	int width, height;
 };
 
+bool device_test_commit(struct liftoff_device *device,
+			drmModeAtomicReq *req, bool *compatible);
+
 struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 						  const char *name);
 void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);

@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -80,4 +81,24 @@ void liftoff_device_destroy(struct liftoff_device *device)
 	}
 	free(device->crtcs);
 	free(device);
+}
+
+bool device_test_commit(struct liftoff_device *device,
+			drmModeAtomicReq *req, bool *compatible)
+{
+	int ret;
+
+	ret = drmModeAtomicCommit(device->drm_fd, req,
+				  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
+	if (ret == 0) {
+		*compatible = true;
+	} else if (-ret == EINVAL || -ret == ERANGE) {
+		*compatible = false;
+	} else {
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeAtomicCommit");
+		*compatible = false;
+		return false;
+	}
+
+	return true;
 }
