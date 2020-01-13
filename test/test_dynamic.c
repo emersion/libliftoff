@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 	req = drmModeAtomicAlloc();
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
-	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
+	assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
 	drmModeAtomicFree(req);
 
 	commit_count = liftoff_mock_commit_count;
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
 
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
-	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
+	assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
 	if (want_reuse_prev_alloc) {
 		/* The library should perform only one TEST_ONLY commit with the
 		 * previous plane allocation. */

@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,8 +19,8 @@ size_t liftoff_mock_commit_count = 0;
 
 struct liftoff_mock_plane {
 	uint32_t id;
-	int type;
 	struct liftoff_layer *compatible_layers[MAX_LAYERS];
+	uint64_t prop_values[MAX_PLANE_PROPS];
 };
 
 struct liftoff_mock_prop {
@@ -96,7 +97,7 @@ struct liftoff_mock_plane *liftoff_mock_drm_create_plane(int type)
 	}
 
 	plane->id = 0xEE000000 + i;
-	plane->type = type;
+	plane->prop_values[PLANE_TYPE] = type;
 	return plane;
 }
 
@@ -178,16 +179,38 @@ static struct liftoff_layer *mock_fb_get_layer(uint32_t fb_id)
 	return mock_fbs[i];
 }
 
-struct liftoff_layer *liftoff_mock_plane_get_layer(struct liftoff_mock_plane *plane,
-						   drmModeAtomicReq *req)
+struct liftoff_layer *liftoff_mock_plane_get_layer(struct liftoff_mock_plane *plane)
 {
-	uint64_t fb_id;
+	return mock_fb_get_layer(plane->prop_values[PLANE_FB_ID]);
+}
 
-	if (!mock_atomic_req_get_property(req, plane->id, PLANE_FB_ID, &fb_id)) {
-		return NULL;
+static size_t get_prop_index(uint32_t id)
+{
+	size_t i;
+
+	assert((id & 0xFF000000) == 0xB0000000);
+
+	i = id & 0x00FFFFFF;
+	assert(i < sizeof(plane_props) / sizeof(plane_props[0]));
+
+	return i;
+}
+
+static void apply_atomic_req(drmModeAtomicReq *req)
+{
+	int i;
+	size_t prop_index;
+	struct liftoff_mock_prop *prop;
+	struct liftoff_mock_plane *plane;
+
+	for (i = 0; i < req->cursor; i++) {
+		prop = &req->props[i];
+		plane = liftoff_mock_drm_get_plane(prop->obj_id);
+		prop_index = get_prop_index(prop->prop_id);
+		plane->prop_values[prop_index] = prop->value;
+		fprintf(stderr, "plane %"PRIu32": setting %s = %"PRIu64"\n",
+			plane->id, plane_props[prop_index], prop->value);
 	}
-
-	return mock_fb_get_layer(fb_id);
 }
 
 int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
@@ -210,18 +233,21 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 			break;
 		}
 
-		has_fb = mock_atomic_req_get_property(req, plane->id,
-						      PLANE_FB_ID, &fb_id);
-		has_crtc = mock_atomic_req_get_property(req, plane->id,
-						        PLANE_CRTC_ID,
-							&crtc_id);
+		fb_id = plane->prop_values[PLANE_FB_ID];
+		crtc_id = plane->prop_values[PLANE_CRTC_ID];
+		mock_atomic_req_get_property(req, plane->id, PLANE_FB_ID,
+					     &fb_id);
+		mock_atomic_req_get_property(req, plane->id, PLANE_CRTC_ID,
+					     &crtc_id);
 
-		has_fb = has_fb && fb_id != 0;
-		has_crtc = has_crtc && crtc_id != 0;
+		has_fb = fb_id != 0;
+		has_crtc = crtc_id != 0;
 
 		if (has_fb != has_crtc) {
 			fprintf(stderr, "plane %u: both FB_ID and CRTC_ID must "
-				"be set or unset together\n", plane->id);
+				"be set or unset together (FB_ID = %"PRIu64", "
+				"CRTC_ID = %"PRIu64")\n", plane->id, fb_id,
+				crtc_id);
 			return -EINVAL;
 		}
 
@@ -252,6 +278,8 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 			}
 		}
 	}
+
+	apply_atomic_req(req);
 
 	return 0;
 }
@@ -341,13 +369,11 @@ drmModeObjectProperties *drmModeObjectGetProperties(int fd, uint32_t obj_id,
 	for (i = 0; i < props->count_props; i++) {
 		prop_ids[i] = 0xB0000000 + i;
 	}
-	props->prop_values = calloc(props->count_props, sizeof(uint64_t));
-	props->prop_values[PLANE_TYPE] = plane->type;
+	props->prop_values = plane->prop_values;
 	return props;
 }
 
 void drmModeFreeObjectProperties(drmModeObjectProperties *props) {
-	free(props->prop_values);
 	free(props);
 }
 
@@ -357,10 +383,8 @@ drmModePropertyRes *drmModeGetProperty(int fd, uint32_t id)
 	drmModePropertyRes *prop;
 
 	assert_drm_fd(fd);
-	assert((id & 0xFF000000) == 0xB0000000);
 
-	i = id & 0x00FFFFFF;
-	assert(i < sizeof(plane_props) / sizeof(plane_props[0]));
+	i = get_prop_index(id);
 
 	prop = calloc(1, sizeof(*prop));
 	prop->prop_id = id;

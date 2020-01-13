@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 			assert(ok);
 		}
 
-		assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
+		assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
 
 		drmModeAtomicFree(req);
 	}

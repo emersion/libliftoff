@@ -705,7 +705,7 @@ static void test_basic(void)
 	req = drmModeAtomicAlloc();
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
-	assert(liftoff_mock_plane_get_layer(mock_plane, req) == layer);
+	assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
 	drmModeAtomicFree(req);
 
 	liftoff_device_destroy(device);
@@ -740,7 +740,7 @@ static void test_no_fb(bool zero_fb_id)
 
 	req = drmModeAtomicAlloc();
 	ok = liftoff_output_apply(output, req);
-	assert(liftoff_mock_plane_get_layer(mock_plane, req) == NULL);
+	assert(liftoff_mock_plane_get_layer(mock_plane) == NULL);
 	assert(ok);
 	drmModeAtomicFree(req);
 
