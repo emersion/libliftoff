@@ -88,8 +88,10 @@ bool device_test_commit(struct liftoff_device *device,
 {
 	int ret;
 
-	ret = drmModeAtomicCommit(device->drm_fd, req,
-				  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
+	do {
+		ret = drmModeAtomicCommit(device->drm_fd, req,
+					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
+	} while (-ret == EINTR || -ret == EAGAIN);
 	if (ret == 0) {
 		*compatible = true;
 	} else if (-ret == EINVAL || -ret == ERANGE) {
