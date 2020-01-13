@@ -612,7 +612,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer == NULL) {
 			liftoff_log(LIFTOFF_DEBUG,
-				    "Disabling plane %d", plane->id);
+				    "Disabling plane %"PRIu32, plane->id);
 			if (!plane_apply(plane, NULL, req, &compatible)) {
 				return false;
 			}
