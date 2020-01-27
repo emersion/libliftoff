@@ -47,6 +47,8 @@ liftoff = declare_dependency(
 	dependencies: liftoff_deps,
 )
 
+install_headers('include/libliftoff.h')
+
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
 	libraries: liftoff_lib,
