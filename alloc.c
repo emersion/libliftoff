@@ -406,7 +406,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 
 		/* Try to use this layer for the current plane */
-		liftoff_log(LIFTOFF_DEBUG, "Layer %p -> plane %"PRIu32": "
+		liftoff_log(LIFTOFF_DEBUG, "  Layer %p -> plane %"PRIu32": "
 			    "applying properties...",
 			    (void *)layer, plane->id);
 		if (!plane_apply(plane, layer, result->req, &compatible)) {
@@ -414,7 +414,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 		if (!compatible) {
 			liftoff_log(LIFTOFF_DEBUG,
-				    "Layer %p -> plane %"PRIu32": "
+				    "  Layer %p -> plane %"PRIu32": "
 				    "incompatible properties",
 				    (void *)layer, plane->id);
 			continue;
@@ -425,7 +425,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		}
 		if (compatible) {
 			liftoff_log(LIFTOFF_DEBUG,
-				    "Layer %p -> plane %"PRIu32": success",
+				    "  Layer %p -> plane %"PRIu32": success",
 				    (void *)layer, plane->id);
 			/* Continue with the next plane */
 			plane_step_init_next(&next_step, step, layer);
@@ -659,7 +659,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 
 	liftoff_log(LIFTOFF_DEBUG,
 		    "Found plane allocation for output %p with "
-		    "score=%d", (void *)output, result.best_score);
+		    "score=%d:", (void *)output, result.best_score);
 
 	/* Apply the best allocation */
 	i = 0;
@@ -670,8 +670,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 			continue;
 		}
 
-		liftoff_log(LIFTOFF_DEBUG,
-			    "Assigning layer %p to plane %"PRIu32,
+		liftoff_log(LIFTOFF_DEBUG, "  Layer %p -> plane %"PRIu32,
 			    (void *)layer, plane->id);
 
 		assert(plane->layer == NULL);
