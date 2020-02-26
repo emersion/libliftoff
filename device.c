@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -11,6 +12,8 @@ struct liftoff_device *liftoff_device_create(int drm_fd)
 	drmModeRes *drm_res;
 	drmModePlaneRes *drm_plane_res;
 	uint32_t i;
+
+	liftoff_log_cnt(LIFTOFF_DEBUG, "\nCreating device for fd %d. ", drm_fd);
 
 	device = calloc(1, sizeof(*device));
 	if (device == NULL) {
@@ -56,13 +59,21 @@ struct liftoff_device *liftoff_device_create(int drm_fd)
 		return NULL;
 	}
 
+	liftoff_log(LIFTOFF_DEBUG, "The device has %"PRIu32 " planes:", drm_plane_res->count_planes);
+
 	for (i = 0; i < drm_plane_res->count_planes; i++) {
+		if (i < 9 && drm_plane_res->count_planes >= 9) {
+			liftoff_log_cnt(LIFTOFF_DEBUG, " ");
+		}
+		liftoff_log_cnt(LIFTOFF_DEBUG, "[%d] ", i + 1);
 		if (plane_create(device, drm_plane_res->planes[i]) == NULL) {
 			liftoff_device_destroy(device);
 			return NULL;
 		}
 	}
 	drmModeFreePlaneResources(drm_plane_res);
+
+	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
 
 	return device;
 }

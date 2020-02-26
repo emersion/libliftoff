@@ -30,6 +30,37 @@ static int guess_plane_zpos_from_type(struct liftoff_device *device,
 	return 0;
 }
 
+static void log_plane(struct liftoff_plane *plane)
+{
+	size_t i;
+	int per_line = 0;
+
+	if (!log_has(LIFTOFF_DEBUG)) {
+		return;
+	}
+
+	liftoff_log_cnt(LIFTOFF_DEBUG, "     type: ");
+	if (plane->type == DRM_PLANE_TYPE_PRIMARY) {
+		liftoff_log(LIFTOFF_DEBUG, "Primary");
+	} else if (plane->type == DRM_PLANE_TYPE_CURSOR) {
+		liftoff_log(LIFTOFF_DEBUG, "Cursor");
+	} else {
+		liftoff_log(LIFTOFF_DEBUG, "Overlay");
+	}
+	liftoff_log(LIFTOFF_DEBUG, "     zpos: %"PRIu32, plane->zpos);
+
+	liftoff_log_cnt(LIFTOFF_DEBUG, "    props:");
+	for (i = 0; i < plane->props_len; i++) {
+		if (per_line == 5) {
+			liftoff_log_cnt(LIFTOFF_DEBUG, "\n          ");
+			per_line = 0;
+		}
+		liftoff_log_cnt(LIFTOFF_DEBUG, " %s", plane->props[i].name);
+		per_line++;
+	}
+	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
+}
+
 struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 {
 	struct liftoff_plane *plane, *cur;
@@ -40,6 +71,8 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 	struct liftoff_plane_property *prop;
 	uint64_t value;
 	bool has_type = false, has_zpos = false;
+
+	liftoff_log(LIFTOFF_DEBUG, "Plane %"PRIu32, id);
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
@@ -96,8 +129,8 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 
 	if (!has_type) {
 		liftoff_log(LIFTOFF_ERROR,
-			    "plane %"PRIu32" is missing the 'type' property",
-			    plane->id);
+					"plane %"PRIu32" is missing the 'type' property",
+					plane->id);
 		free(plane);
 		return NULL;
 	} else if (!has_zpos) {
@@ -124,6 +157,8 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 			liftoff_list_insert(device->planes.prev, &plane->link);
 		}
 	}
+
+	log_plane(plane);
 
 	return plane;
 }
