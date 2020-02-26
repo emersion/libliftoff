@@ -147,6 +147,17 @@ void layer_mark_clean(struct liftoff_layer *layer)
 	}
 }
 
+static void log_priority(struct liftoff_layer *layer)
+{
+	if (layer->current_priority == layer->pending_priority) {
+		return;
+	}
+
+	liftoff_log(LIFTOFF_DEBUG, "Layer %p priority change: %d -> %d",
+		    (void *)layer, layer->current_priority,
+		    layer->pending_priority);
+}
+
 void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
 	struct liftoff_layer_property *prop;
 
@@ -158,10 +169,9 @@ void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
 	}
 
 	if (make_current) {
+		log_priority(layer);
 		layer->current_priority = layer->pending_priority;
 		layer->pending_priority = 0;
-		liftoff_log(LIFTOFF_DEBUG, "Layer %p has priority %d",
-			    (void *)layer, layer->current_priority);
 	}
 }
 
