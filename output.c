@@ -67,9 +67,21 @@ void output_log_layers(struct liftoff_output *output) {
 	liftoff_list_for_each(layer, &output->layers, link) {
 		liftoff_log(LIFTOFF_DEBUG, "  Layer %p:", (void *)layer);
 		for (i = 0; i < layer->props_len; i++) {
-			liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIu64,
-				    layer->props[i].name,
-				    layer->props[i].value);
+			char *name = layer->props[i].name;
+			uint64_t value = layer->props[i].value;
+
+			if (strcmp(name, "CRTC_X") == 0 ||
+			    strcmp(name, "CRTC_Y") == 0) {
+				liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIi32,
+					    name, (int32_t)value);
+			} else if (strcmp(name, "SRC_W") == 0 ||
+				   strcmp(name, "SRC_H") == 0) {
+				liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIu64,
+					    name, value >> 16);
+			} else {
+				liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIu64,
+					    name, value);
+			}
 		}
 	}
 }
