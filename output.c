@@ -59,6 +59,10 @@ void output_log_layers(struct liftoff_output *output) {
 	struct liftoff_layer *layer;
 	size_t i;
 
+	if (!log_has(LIFTOFF_DEBUG)) {
+		return;
+	}
+
 	liftoff_log(LIFTOFF_DEBUG, "Layers on CRTC %"PRIu32":", output->crtc_id);
 	liftoff_list_for_each(layer, &output->layers, link) {
 		liftoff_log(LIFTOFF_DEBUG, "  Layer %p:", (void *)layer);
