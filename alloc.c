@@ -614,16 +614,17 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 
 	/* Disable all planes. Do it before building mappings to make sure not
 	   to hit bandwidth limits because too many planes are enabled. */
+	liftoff_log_cnt(LIFTOFF_DEBUG, "Disabling planes:");
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer == NULL) {
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Disabling plane %"PRIu32, plane->id);
+			liftoff_log_cnt(LIFTOFF_DEBUG, " %"PRIu32, plane->id);
 			if (!plane_apply(plane, NULL, req, &compatible)) {
 				return false;
 			}
 			assert(compatible);
 		}
 	}
+	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
 
 	result.req = req;
 	result.planes_len = liftoff_list_length(&device->planes);
