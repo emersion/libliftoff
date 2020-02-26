@@ -568,6 +568,58 @@ static void log_reuse(struct liftoff_output *output)
 	output->alloc_reused_counter++;
 }
 
+static void log_plane_type_change(uint32_t base, uint32_t cmp)
+{
+	switch (base) {
+	case DRM_PLANE_TYPE_PRIMARY:
+		liftoff_log_cnt(LIFTOFF_DEBUG, " <p|");
+		liftoff_log_cnt(LIFTOFF_DEBUG,
+						cmp == DRM_PLANE_TYPE_OVERLAY ? "o>" : "c>");
+		break;
+	case DRM_PLANE_TYPE_CURSOR:
+		liftoff_log_cnt(LIFTOFF_DEBUG, " <c|");
+		liftoff_log_cnt(LIFTOFF_DEBUG,
+						cmp == DRM_PLANE_TYPE_PRIMARY ? "p>" : "o>");
+		break;
+	case DRM_PLANE_TYPE_OVERLAY:
+		liftoff_log_cnt(LIFTOFF_DEBUG, " <o|");
+		liftoff_log_cnt(LIFTOFF_DEBUG,
+						cmp == DRM_PLANE_TYPE_PRIMARY ? "p>" : "c>");
+		break;
+	}
+}
+
+static bool reset_planes(struct liftoff_device *device, drmModeAtomicReq *req)
+{
+	struct liftoff_plane *plane;
+	uint32_t debug_type = DRM_PLANE_TYPE_PRIMARY;
+	bool compatible;
+
+	liftoff_log_cnt(LIFTOFF_DEBUG, "Reset planes:");
+
+	liftoff_list_for_each(plane, &device->planes, link) {
+		if (plane->layer != NULL) {
+			continue;
+		}
+
+		if (log_has(LIFTOFF_DEBUG)) {
+			if (plane->type != debug_type) {
+				log_plane_type_change(debug_type, plane->type);
+				debug_type = plane->type;
+			}
+			liftoff_log_cnt(LIFTOFF_DEBUG, " %"PRIu32, plane->id);
+		}
+
+		if (!plane_apply(plane, NULL, req, &compatible)) {
+			return false;
+		}
+		assert(compatible);
+	}
+
+	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
+	return true;
+}
+
 bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 {
 	struct liftoff_device *device;
@@ -576,7 +628,6 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 	struct alloc_result result;
 	struct alloc_step step;
 	size_t i;
-	bool compatible;
 
 	device = output->device;
 
@@ -589,7 +640,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 
 	output_log_layers(output);
 
-	/* Unset all existing plane and layer mappings. */
+	/* Unset all existing plane and layer mappings with this output. */
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer != NULL && plane->layer->output == output) {
 			plane->layer->plane = NULL;
@@ -599,17 +650,9 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 
 	/* Disable all planes. Do it before building mappings to make sure not
 	   to hit bandwidth limits because too many planes are enabled. */
-	liftoff_log_cnt(LIFTOFF_DEBUG, "Reset planes:");
-	liftoff_list_for_each(plane, &device->planes, link) {
-		if (plane->layer == NULL) {
-			liftoff_log_cnt(LIFTOFF_DEBUG, " %"PRIu32, plane->id);
-			if (!plane_apply(plane, NULL, req, &compatible)) {
-				return false;
-			}
-			assert(compatible);
-		}
+	if (!reset_planes(device, req)) {
+		return false;
 	}
-	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
 
 	result.req = req;
 	result.planes_len = liftoff_list_length(&device->planes);
