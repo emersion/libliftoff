@@ -65,7 +65,16 @@ void output_log_layers(struct liftoff_output *output) {
 
 	liftoff_log(LIFTOFF_DEBUG, "Layers on CRTC %"PRIu32":", output->crtc_id);
 	liftoff_list_for_each(layer, &output->layers, link) {
-		liftoff_log(LIFTOFF_DEBUG, "  Layer %p:", (void *)layer);
+		if (layer->force_composition) {
+			liftoff_log(LIFTOFF_DEBUG, "  Layer %p "
+				    "(forced composition):", (void *)layer);
+		} else {
+			if (!layer_has_fb(layer)) {
+				continue;
+			}
+			liftoff_log(LIFTOFF_DEBUG, "  Layer %p:", (void *)layer);
+		}
+
 		for (i = 0; i < layer->props_len; i++) {
 			char *name = layer->props[i].name;
 			uint64_t value = layer->props[i].value;
