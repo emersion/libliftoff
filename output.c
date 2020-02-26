@@ -23,8 +23,11 @@ struct liftoff_output *liftoff_output_create(struct liftoff_device *device,
 		return NULL;
 	}
 
+	liftoff_log(LIFTOFF_DEBUG, "Creating output for CRTC id: %"PRIu32 " index: %zu", crtc_id, crtc_index);
+
 	output = calloc(1, sizeof(*output));
 	if (output == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "calloc");
 		return NULL;
 	}
 	output->device = device;
@@ -63,7 +66,17 @@ void output_log_layers(struct liftoff_output *output) {
 		return;
 	}
 
-	liftoff_log(LIFTOFF_DEBUG, "Layers on CRTC %"PRIu32":", output->crtc_id);
+	liftoff_log(LIFTOFF_DEBUG, "\n== Apply request for output %"PRIu32" ==", output->crtc_id);
+
+	if (output->alloc_reused_counter != 0) {
+		liftoff_log(LIFTOFF_DEBUG,
+					"  Note: Reused previous plane allocation %d times.",
+					output->alloc_reused_counter);
+		output->alloc_reused_counter = 0;
+	}
+
+	liftoff_log(LIFTOFF_DEBUG, "Active layers:");
+
 	liftoff_list_for_each(layer, &output->layers, link) {
 		if (layer->force_composition) {
 			liftoff_log(LIFTOFF_DEBUG, "  Layer %p "
