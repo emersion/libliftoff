@@ -32,6 +32,8 @@ struct liftoff_output {
 	struct liftoff_list layers; /* liftoff_layer.link */
 	/* layer added or removed, or composition layer changed */
 	bool layers_changed;
+
+	int alloc_reused_counter;
 };
 
 struct liftoff_layer {

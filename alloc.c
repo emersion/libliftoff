@@ -558,6 +558,30 @@ static void update_layers_priority(struct liftoff_device *device)
 	}
 }
 
+static void log_reuse(struct liftoff_output *output)
+{
+	if (output->alloc_reused_counter == 0) {
+		liftoff_log(LIFTOFF_DEBUG,
+			    "Reusing previous plane allocation on output %p",
+			    (void *)output);
+	}
+	output->alloc_reused_counter++;
+}
+
+static void log_no_reuse(struct liftoff_output *output)
+{
+	liftoff_log(LIFTOFF_DEBUG, "Computing plane allocation on output %p",
+		    (void *)output);
+
+	if (output->alloc_reused_counter != 0) {
+		liftoff_log(LIFTOFF_DEBUG,
+			    "Stopped reusing previous plane allocation on "
+			    "output %p (had reused it %d times)",
+			    (void *)output, output->alloc_reused_counter);
+		output->alloc_reused_counter = 0;
+	}
+}
+
 bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 {
 	struct liftoff_device *device;
@@ -573,9 +597,10 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 	update_layers_priority(device);
 
 	if (reuse_previous_alloc(output, req)) {
-		liftoff_log(LIFTOFF_DEBUG, "Re-using previous plane allocation");
+		log_reuse(output);
 		return true;
 	}
+	log_no_reuse(output);
 
 	output_log_layers(output);
 
