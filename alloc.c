@@ -568,6 +568,19 @@ static void log_reuse(struct liftoff_output *output)
 	output->alloc_reused_counter++;
 }
 
+static void log_no_reuse(struct liftoff_output *output)
+{
+	liftoff_log(LIFTOFF_DEBUG,
+				"\n== Apply request for output %"PRIu32" ==", output->crtc_id);
+
+	if (output->alloc_reused_counter != 0) {
+		liftoff_log(LIFTOFF_DEBUG,
+				"  Note: Reused previous plane allocation %d times.",
+					output->alloc_reused_counter);
+		output->alloc_reused_counter = 0;
+	}
+}
+
 static void log_plane_type_change(uint32_t base, uint32_t cmp)
 {
 	switch (base) {
@@ -589,13 +602,109 @@ static void log_plane_type_change(uint32_t base, uint32_t cmp)
 	}
 }
 
+static void log_planes(struct liftoff_device *device,
+					   struct liftoff_output *output)
+{
+	struct liftoff_plane *plane;
+	drmModeObjectProperties *drm_props;
+	drmModePropertyRes *drm_prop;
+	size_t i;
+	int per_line, max_per_line;
+
+	if (!log_has(LIFTOFF_DEBUG)) {
+		return;
+	}
+
+	liftoff_log_cnt(LIFTOFF_DEBUG, "\nAvailable planes");
+	if (output) {
+		liftoff_log(LIFTOFF_DEBUG, " (on output %"PRIu32 "):", output->crtc_id);
+	} else {
+		liftoff_log(LIFTOFF_DEBUG, ":");
+	}
+
+	liftoff_list_for_each(plane, &device->planes, link) {
+		bool active = false;
+
+		if (output) {
+			if ((plane->possible_crtcs & (1 << output->crtc_index)) == 0) {
+				continue;
+			}
+		}
+
+		drm_props = drmModeObjectGetProperties(device->drm_fd, plane->id,
+							   DRM_MODE_OBJECT_PLANE);
+		if (drm_props == NULL) {
+			liftoff_log_errno(LIFTOFF_ERROR, "drmModeObjectGetProperties");
+			continue;
+		}
+
+		for (i = 0; i < drm_props->count_props; i++) {
+			drm_prop = drmModeGetProperty(device->drm_fd,
+							  drm_props->props[i]);
+			if (drm_prop == NULL) {
+				liftoff_log_errno(LIFTOFF_ERROR, "drmModeObjectGetProperties");
+				continue;
+			}
+
+			if (strcmp(drm_prop->name, "CRTC_ID") == 0
+					&& drm_props->prop_values[i] != 0) {
+				active = true;
+				break;
+			}
+		}
+
+		liftoff_log_cnt(LIFTOFF_DEBUG, "  Plane %"PRIu32 "%s", plane->id,
+			active ? ":" : " (inactive):");
+
+		max_per_line = active ? 1 : 4;
+		per_line = max_per_line - 1;
+		for (i = 0; i < drm_props->count_props; i++) {
+			uint64_t value = drm_props->prop_values[i];
+			char *name;
+
+			if (++per_line == max_per_line) {
+				liftoff_log_cnt(LIFTOFF_DEBUG, "\n   ");
+				per_line = 0;
+			}
+
+			drm_prop = drmModeGetProperty(device->drm_fd,
+							  drm_props->props[i]);
+			if (drm_prop == NULL) {
+				liftoff_log_cnt(LIFTOFF_DEBUG, "ERR!");
+				continue;
+			}
+
+			name = drm_prop->name;
+
+			if (strcmp(name, "type") == 0) {
+				liftoff_log_cnt(LIFTOFF_DEBUG, " %s: %s", name,
+					value == DRM_PLANE_TYPE_PRIMARY ? "primary" :
+					value == DRM_PLANE_TYPE_CURSOR ? "cursor" : "overlay");
+				continue;
+			}
+
+			if (strcmp(name, "CRTC_X") == 0 || strcmp(name, "CRTC_Y") == 0
+					|| strcmp(name, "IN_FENCE_FD") == 0) {
+				liftoff_log_cnt(LIFTOFF_DEBUG, " %s: %"PRIi32, name, (int32_t)value);
+				continue;
+			}
+
+			if (strcmp(name, "SRC_W") == 0 || strcmp(name, "SRC_H") == 0) {
+				value = value >> 16;
+			}
+			liftoff_log_cnt(LIFTOFF_DEBUG, " %s: %"PRIu64, name, value);
+		}
+		liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
+	}
+}
+
 static bool reset_planes(struct liftoff_device *device, drmModeAtomicReq *req)
 {
 	struct liftoff_plane *plane;
 	uint32_t debug_type = DRM_PLANE_TYPE_PRIMARY;
 	bool compatible;
 
-	liftoff_log_cnt(LIFTOFF_DEBUG, "Reset planes:");
+	liftoff_log_cnt(LIFTOFF_DEBUG, "\nReset planes:");
 
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer != NULL) {
@@ -616,7 +725,7 @@ static bool reset_planes(struct liftoff_device *device, drmModeAtomicReq *req)
 		assert(compatible);
 	}
 
-	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
+	liftoff_log(LIFTOFF_DEBUG, "\n");
 	return true;
 }
 
@@ -638,7 +747,11 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 		return true;
 	}
 
-	output_log_layers(output);
+	if (log_has(LIFTOFF_DEBUG)) {
+		log_no_reuse(output);
+		log_planes(device, output);
+		output_log_layers(output);
+	}
 
 	/* Unset all existing plane and layer mappings with this output. */
 	liftoff_list_for_each(plane, &device->planes, link) {
@@ -691,7 +804,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 		    "score=%d:", (void *)output, result.best_score);
 
 	/* Apply the best allocation */
-	liftoff_log(LIFTOFF_DEBUG, "Final assignment of layers to planes:");
+	liftoff_log(LIFTOFF_DEBUG, "\nFinal assignment of layers to planes:");
 	i = j = 0;
 	liftoff_list_for_each(plane, &device->planes, link) {
 		layer = result.best[i];
@@ -702,9 +815,9 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 
 		j++;
 		liftoff_log(LIFTOFF_DEBUG, "  [%zu] Layer %p -> plane %"PRIu32
-					" (%s)", j, (void *)layer, plane->id,
-					plane->type == DRM_PLANE_TYPE_PRIMARY ? "primary" :
-					DRM_PLANE_TYPE_OVERLAY ? "overlay" : "cursor");
+			" (%s)", j, (void *)layer, plane->id,
+			plane->type == DRM_PLANE_TYPE_PRIMARY ? "primary" :
+			plane->type == DRM_PLANE_TYPE_OVERLAY ? "overlay" : "cursor");
 
 		assert(plane->layer == NULL);
 		assert(layer->plane == NULL);
