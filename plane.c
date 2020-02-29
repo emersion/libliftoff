@@ -30,7 +30,8 @@ static int guess_plane_zpos_from_type(struct liftoff_device *device,
 	return 0;
 }
 
-static void log_plane(struct liftoff_plane *plane)
+static void log_plane(struct liftoff_device *device,
+					  struct liftoff_plane *plane)
 {
 	size_t i;
 	int per_line = 0;
@@ -39,26 +40,29 @@ static void log_plane(struct liftoff_plane *plane)
 		return;
 	}
 
-	liftoff_log_cnt(LIFTOFF_DEBUG, "     type: ");
+	debug_cnt(device, "     type: ");
 	if (plane->type == DRM_PLANE_TYPE_PRIMARY) {
-		liftoff_log(LIFTOFF_DEBUG, "Primary");
+		debug_cnt(device, "Primary");
 	} else if (plane->type == DRM_PLANE_TYPE_CURSOR) {
-		liftoff_log(LIFTOFF_DEBUG, "Cursor");
+		debug_cnt(device, "Cursor");
 	} else {
-		liftoff_log(LIFTOFF_DEBUG, "Overlay");
+		debug_cnt(device, "Overlay");
 	}
+	debug_cnt(device, NULL);
+
 	liftoff_log(LIFTOFF_DEBUG, "     zpos: %"PRIu32, plane->zpos);
 
-	liftoff_log_cnt(LIFTOFF_DEBUG, "    props:");
+	debug_cnt(device, "    props:");
 	for (i = 0; i < plane->props_len; i++) {
 		if (per_line == 5) {
-			liftoff_log_cnt(LIFTOFF_DEBUG, "\n          ");
+			debug_cnt(device, NULL);
+			debug_cnt(device, "          ");
 			per_line = 0;
 		}
-		liftoff_log_cnt(LIFTOFF_DEBUG, " %s", plane->props[i].name);
+		debug_cnt(device, " %s", plane->props[i].name);
 		per_line++;
 	}
-	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
+	debug_cnt(device, NULL);
 }
 
 struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
@@ -72,7 +76,8 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 	uint64_t value;
 	bool has_type = false, has_zpos = false;
 
-	liftoff_log(LIFTOFF_DEBUG, "Plane %"PRIu32, id);
+	debug_cnt(device, "Plane %"PRIu32, id);
+	debug_cnt(device, NULL);
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
@@ -158,7 +163,7 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 		}
 	}
 
-	log_plane(plane);
+	log_plane(device, plane);
 
 	return plane;
 }

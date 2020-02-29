@@ -74,7 +74,7 @@ enum liftoff_log_importance {
 	LIFTOFF_DEBUG,
 };
 
-typedef void (*liftoff_log_func)(enum liftoff_log_importance importance, bool newline,
+typedef void (*liftoff_log_func)(enum liftoff_log_importance importance,
 				 const char *fmt, va_list args);
 
 void liftoff_log_init(enum liftoff_log_importance verbosity,

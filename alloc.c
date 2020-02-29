@@ -581,23 +581,21 @@ static void log_no_reuse(struct liftoff_output *output)
 	}
 }
 
-static void log_plane_type_change(uint32_t base, uint32_t cmp)
+static void log_plane_type_change(struct liftoff_device *device,
+								  uint32_t base, uint32_t cmp)
 {
 	switch (base) {
 	case DRM_PLANE_TYPE_PRIMARY:
-		liftoff_log_cnt(LIFTOFF_DEBUG, " <p|");
-		liftoff_log_cnt(LIFTOFF_DEBUG,
-						cmp == DRM_PLANE_TYPE_OVERLAY ? "o>" : "c>");
+		debug_cnt(device, " <p|");
+		debug_cnt(device, cmp == DRM_PLANE_TYPE_OVERLAY ? "o>" : "c>");
 		break;
 	case DRM_PLANE_TYPE_CURSOR:
-		liftoff_log_cnt(LIFTOFF_DEBUG, " <c|");
-		liftoff_log_cnt(LIFTOFF_DEBUG,
-						cmp == DRM_PLANE_TYPE_PRIMARY ? "p>" : "o>");
+		debug_cnt(device, " <c|");
+		debug_cnt(device, cmp == DRM_PLANE_TYPE_PRIMARY ? "p>" : "o>");
 		break;
 	case DRM_PLANE_TYPE_OVERLAY:
-		liftoff_log_cnt(LIFTOFF_DEBUG, " <o|");
-		liftoff_log_cnt(LIFTOFF_DEBUG,
-						cmp == DRM_PLANE_TYPE_PRIMARY ? "p>" : "c>");
+		debug_cnt(device, " <o|");
+		debug_cnt(device, cmp == DRM_PLANE_TYPE_PRIMARY ? "p>" : "c>");
 		break;
 	}
 }
@@ -615,12 +613,13 @@ static void log_planes(struct liftoff_device *device,
 		return;
 	}
 
-	liftoff_log_cnt(LIFTOFF_DEBUG, "\nAvailable planes");
+	debug_cnt(device, "Available planes");
 	if (output) {
-		liftoff_log(LIFTOFF_DEBUG, " (on output %"PRIu32 "):", output->crtc_id);
+		debug_cnt(device, " (on output %"PRIu32 "):", output->crtc_id);
 	} else {
-		liftoff_log(LIFTOFF_DEBUG, ":");
+		debug_cnt(device, ":");
 	}
+	debug_cnt(device, NULL);
 
 	liftoff_list_for_each(plane, &device->planes, link) {
 		bool active = false;
@@ -653,8 +652,8 @@ static void log_planes(struct liftoff_device *device,
 			}
 		}
 
-		liftoff_log_cnt(LIFTOFF_DEBUG, "  Plane %"PRIu32 "%s", plane->id,
-			active ? ":" : " (inactive):");
+		debug_cnt(device, "  Plane %"PRIu32 "%s", plane->id,
+				  active ? ":" : " (inactive):");
 
 		max_per_line = active ? 1 : 4;
 		per_line = max_per_line - 1;
@@ -663,21 +662,22 @@ static void log_planes(struct liftoff_device *device,
 			char *name;
 
 			if (++per_line == max_per_line) {
-				liftoff_log_cnt(LIFTOFF_DEBUG, "\n   ");
+				debug_cnt(device, NULL);
+				debug_cnt(device, "   ");
 				per_line = 0;
 			}
 
 			drm_prop = drmModeGetProperty(device->drm_fd,
 							  drm_props->props[i]);
 			if (drm_prop == NULL) {
-				liftoff_log_cnt(LIFTOFF_DEBUG, "ERR!");
+				debug_cnt(device, "ERR!");
 				continue;
 			}
 
 			name = drm_prop->name;
 
 			if (strcmp(name, "type") == 0) {
-				liftoff_log_cnt(LIFTOFF_DEBUG, " %s: %s", name,
+				debug_cnt(device, " %s: %s", name,
 					value == DRM_PLANE_TYPE_PRIMARY ? "primary" :
 					value == DRM_PLANE_TYPE_CURSOR ? "cursor" : "overlay");
 				continue;
@@ -685,16 +685,16 @@ static void log_planes(struct liftoff_device *device,
 
 			if (strcmp(name, "CRTC_X") == 0 || strcmp(name, "CRTC_Y") == 0
 					|| strcmp(name, "IN_FENCE_FD") == 0) {
-				liftoff_log_cnt(LIFTOFF_DEBUG, " %s: %"PRIi32, name, (int32_t)value);
+				debug_cnt(device, " %s: %"PRIi32, name, (int32_t)value);
 				continue;
 			}
 
 			if (strcmp(name, "SRC_W") == 0 || strcmp(name, "SRC_H") == 0) {
 				value = value >> 16;
 			}
-			liftoff_log_cnt(LIFTOFF_DEBUG, " %s: %"PRIu64, name, value);
+			debug_cnt(device, " %s: %"PRIu64, name, value);
 		}
-		liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
+		debug_cnt(device, NULL);
 	}
 }
 
@@ -704,7 +704,7 @@ static bool reset_planes(struct liftoff_device *device, drmModeAtomicReq *req)
 	uint32_t debug_type = DRM_PLANE_TYPE_PRIMARY;
 	bool compatible;
 
-	liftoff_log_cnt(LIFTOFF_DEBUG, "\nReset planes:");
+	debug_cnt(device, "\nReset planes:");
 
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer != NULL) {
@@ -713,19 +713,21 @@ static bool reset_planes(struct liftoff_device *device, drmModeAtomicReq *req)
 
 		if (log_has(LIFTOFF_DEBUG)) {
 			if (plane->type != debug_type) {
-				log_plane_type_change(debug_type, plane->type);
+				log_plane_type_change(device, debug_type, plane->type);
 				debug_type = plane->type;
 			}
-			liftoff_log_cnt(LIFTOFF_DEBUG, " %"PRIu32, plane->id);
+			debug_cnt(device, " %"PRIu32, plane->id);
 		}
 
 		if (!plane_apply(plane, NULL, req, &compatible)) {
+			debug_cnt(device, "... Error resetting: %"PRIu32, plane->id);
+			debug_cnt(device, NULL);
 			return false;
 		}
 		assert(compatible);
 	}
 
-	liftoff_log(LIFTOFF_DEBUG, "\n");
+	debug_cnt(device, NULL);
 	return true;
 }
 

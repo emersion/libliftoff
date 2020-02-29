@@ -13,13 +13,13 @@ struct liftoff_device *liftoff_device_create(int drm_fd)
 	drmModePlaneRes *drm_plane_res;
 	uint32_t i;
 
-	liftoff_log_cnt(LIFTOFF_DEBUG, "\nCreating device for fd %d. ", drm_fd);
-
 	device = calloc(1, sizeof(*device));
 	if (device == NULL) {
 		liftoff_log_errno(LIFTOFF_ERROR, "calloc");
 		return NULL;
 	}
+
+	liftoff_log(LIFTOFF_DEBUG, "\nCreating device for fd %d. ", drm_fd);
 
 	liftoff_list_init(&device->planes);
 	liftoff_list_init(&device->outputs);
@@ -63,17 +63,15 @@ struct liftoff_device *liftoff_device_create(int drm_fd)
 
 	for (i = 0; i < drm_plane_res->count_planes; i++) {
 		if (i < 9 && drm_plane_res->count_planes >= 9) {
-			liftoff_log_cnt(LIFTOFF_DEBUG, " ");
+			debug_cnt(device, " ");
 		}
-		liftoff_log_cnt(LIFTOFF_DEBUG, "[%d] ", i + 1);
+		debug_cnt(device, "[%d] ", i + 1);
 		if (plane_create(device, drm_plane_res->planes[i]) == NULL) {
 			liftoff_device_destroy(device);
 			return NULL;
 		}
 	}
 	drmModeFreePlaneResources(drm_plane_res);
-
-	liftoff_log_cnt(LIFTOFF_DEBUG, "\n");
 
 	return device;
 }
@@ -91,6 +89,7 @@ void liftoff_device_destroy(struct liftoff_device *device)
 		plane_destroy(plane);
 	}
 	free(device->crtcs);
+	free(device->log_buf);
 	free(device);
 }
 

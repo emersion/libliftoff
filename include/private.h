@@ -19,6 +19,10 @@ struct liftoff_device {
 	size_t crtcs_len;
 
 	int page_flip_counter;
+
+	char *log_buf;
+	size_t log_buf_len;
+	size_t log_buf_index;
 };
 
 struct liftoff_output {
