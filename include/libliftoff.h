@@ -74,8 +74,15 @@ enum liftoff_log_importance {
 	LIFTOFF_DEBUG,
 };
 
+enum liftoff_log_flags {
+	LIFTOFF_LOG_NO_FLAG			= 0,
+	LIFTOFF_LOG_SECTION_START	= 1,
+	LIFTOFF_LOG_SECTION_END		= 2,
+};
+
 typedef void (*liftoff_log_func)(enum liftoff_log_importance importance,
-				 const char *fmt, va_list args);
+								 enum liftoff_log_flags flags,
+								 const char *fmt, va_list args);
 
 void liftoff_log_init(enum liftoff_log_importance verbosity,
 		      liftoff_log_func callback);

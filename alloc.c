@@ -570,8 +570,8 @@ static void log_reuse(struct liftoff_output *output)
 
 static void log_no_reuse(struct liftoff_output *output)
 {
-	liftoff_log(LIFTOFF_DEBUG,
-				"\n== Apply request for output %"PRIu32" ==", output->crtc_id);
+	liftoff_log_formatted(LIFTOFF_DEBUG, LIFTOFF_LOG_SECTION_START,
+				"== Apply request for output %"PRIu32" ==", output->crtc_id);
 
 	if (output->alloc_reused_counter != 0) {
 		liftoff_log(LIFTOFF_DEBUG,
@@ -619,7 +619,7 @@ static void log_planes(struct liftoff_device *device,
 	} else {
 		debug_cnt(device, ":");
 	}
-	debug_cnt(device, NULL);
+	debug_end(device, LIFTOFF_LOG_SECTION_START);
 
 	liftoff_list_for_each(plane, &device->planes, link) {
 		bool active = false;
@@ -662,7 +662,7 @@ static void log_planes(struct liftoff_device *device,
 			char *name;
 
 			if (++per_line == max_per_line) {
-				debug_cnt(device, NULL);
+				debug_end(device, 0);
 				debug_cnt(device, "   ");
 				per_line = 0;
 			}
@@ -694,7 +694,7 @@ static void log_planes(struct liftoff_device *device,
 			}
 			debug_cnt(device, " %s: %"PRIu64, name, value);
 		}
-		debug_cnt(device, NULL);
+		debug_end(device, 0);
 	}
 }
 
@@ -704,7 +704,7 @@ static bool reset_planes(struct liftoff_device *device, drmModeAtomicReq *req)
 	uint32_t debug_type = DRM_PLANE_TYPE_PRIMARY;
 	bool compatible;
 
-	debug_cnt(device, "\nReset planes:");
+	debug_cnt(device, "Reset planes:");
 
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer != NULL) {
@@ -721,13 +721,14 @@ static bool reset_planes(struct liftoff_device *device, drmModeAtomicReq *req)
 
 		if (!plane_apply(plane, NULL, req, &compatible)) {
 			debug_cnt(device, "... Error resetting: %"PRIu32, plane->id);
-			debug_cnt(device, NULL);
+			debug_end(device,
+					  LIFTOFF_LOG_SECTION_START | LIFTOFF_LOG_SECTION_END);
 			return false;
 		}
 		assert(compatible);
 	}
 
-	debug_cnt(device, NULL);
+	debug_end(device, LIFTOFF_LOG_SECTION_START | LIFTOFF_LOG_SECTION_END);
 	return true;
 }
 
@@ -806,7 +807,8 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 		    "score=%d:", (void *)output, result.best_score);
 
 	/* Apply the best allocation */
-	liftoff_log(LIFTOFF_DEBUG, "\nFinal assignment of layers to planes:");
+	liftoff_log_formatted(LIFTOFF_DEBUG, LIFTOFF_LOG_SECTION_START,
+						  "Final assignment of layers to planes:");
 	i = j = 0;
 	liftoff_list_for_each(plane, &device->planes, link) {
 		layer = result.best[i];

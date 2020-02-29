@@ -48,21 +48,21 @@ static void log_plane(struct liftoff_device *device,
 	} else {
 		debug_cnt(device, "Overlay");
 	}
-	debug_cnt(device, NULL);
+	debug_end(device, 0);
 
 	liftoff_log(LIFTOFF_DEBUG, "     zpos: %"PRIu32, plane->zpos);
 
 	debug_cnt(device, "    props:");
 	for (i = 0; i < plane->props_len; i++) {
 		if (per_line == 5) {
-			debug_cnt(device, NULL);
+			debug_end(device, 0);
 			debug_cnt(device, "          ");
 			per_line = 0;
 		}
 		debug_cnt(device, " %s", plane->props[i].name);
 		per_line++;
 	}
-	debug_cnt(device, NULL);
+	debug_end(device, 0);
 }
 
 struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
@@ -77,7 +77,7 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 	bool has_type = false, has_zpos = false;
 
 	debug_cnt(device, "Plane %"PRIu32, id);
-	debug_cnt(device, NULL);
+	debug_end(device, 0);
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
