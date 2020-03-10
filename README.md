@@ -49,9 +49,18 @@ if (ret < 0) {
 drmModeAtomicFree(req);
 ```
 
+## Contributing
+
+Report bugs and send pull requests on [GitHub][github].
+
+We use the Wayland/Weston style and contribution guidelines, see [Weston's
+contributing document][weston-contributing].
+
 ## License
 
 MIT
 
 [liftoff.h]: https://github.com/emersion/libliftoff/blob/master/include/libliftoff.h
 [intro-post]: https://emersion.fr/blog/2019/xdc2019-wrap-up/#libliftoff
+[github]: https://github.com/emersion/libliftoff
+[weston-contributing]: https://gitlab.freedesktop.org/wayland/weston/-/blob/master/CONTRIBUTING.md
