@@ -616,8 +616,6 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 	   to hit bandwidth limits because too many planes are enabled. */
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer == NULL) {
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Disabling plane %"PRIu32, plane->id);
 			if (!plane_apply(plane, NULL, req, &compatible)) {
 				return false;
 			}
