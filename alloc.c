@@ -602,6 +602,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 	}
 	log_no_reuse(output);
 
+	output_log_planes(output);
 	output_log_layers(output);
 
 	/* Unset all existing plane and layer mappings. */
