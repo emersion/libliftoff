@@ -15,4 +15,14 @@ void liftoff_log(enum liftoff_log_importance verbosity,
 		 const char *format, ...) _LIFTOFF_ATTRIB_PRINTF(2, 3);
 void liftoff_log_errno(enum liftoff_log_importance verbosity, const char *msg);
 
+struct liftoff_log_buffer {
+	char *data;
+	size_t len, cap;
+};
+
+void liftoff_log_buffer_append(struct liftoff_log_buffer *buf,
+							   const char *fmt, ...);
+void liftoff_log_buffer_flush(struct liftoff_log_buffer *buf,
+							  enum liftoff_log_importance verbosity);
+
 #endif
