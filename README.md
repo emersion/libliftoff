@@ -8,7 +8,10 @@ libliftoff eases the use of KMS planes from userspace without standing in your
 way.  Users create "virtual planes" called layers, set KMS properties on them,
 and libliftoff will allocate planes for these layers if possible.
 
-See the [blog post introducing the project][intro-post] for more context.
+Resources:
+
+* [Blog post introducing the project][intro-post]
+* [FOSDEM 2020 talk][fosdem-2020]
 
 ## Building
 
@@ -62,5 +65,6 @@ MIT
 
 [liftoff.h]: https://github.com/emersion/libliftoff/blob/master/include/libliftoff.h
 [intro-post]: https://emersion.fr/blog/2019/xdc2019-wrap-up/#libliftoff
+[fosdem-2020]: https://fosdem.org/2020/schedule/event/kms_planes/
 [github]: https://github.com/emersion/libliftoff
 [weston-contributing]: https://gitlab.freedesktop.org/wayland/weston/-/blob/master/CONTRIBUTING.md
