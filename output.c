@@ -58,6 +58,7 @@ void liftoff_output_set_composition_layer(struct liftoff_output *output,
 void output_log_layers(struct liftoff_output *output) {
 	struct liftoff_layer *layer;
 	size_t i;
+	bool is_composition_layer;
 
 	if (!log_has(LIFTOFF_DEBUG)) {
 		return;
@@ -72,7 +73,10 @@ void output_log_layers(struct liftoff_output *output) {
 			if (!layer_has_fb(layer)) {
 				continue;
 			}
-			liftoff_log(LIFTOFF_DEBUG, "  Layer %p:", (void *)layer);
+			is_composition_layer = output->composition_layer == layer;
+			liftoff_log(LIFTOFF_DEBUG, "  Layer %p%s:",
+				    (void *)layer, is_composition_layer ?
+						   " (composition layer)" : "");
 		}
 
 		for (i = 0; i < layer->props_len; i++) {
