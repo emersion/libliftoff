@@ -113,7 +113,7 @@ struct liftoff_mock_plane *liftoff_mock_drm_get_plane(uint32_t id)
 		plane++;
 	}
 
-	assert(0);
+	abort(); // unreachable
 }
 
 void liftoff_mock_plane_add_compatible_layer(struct liftoff_mock_plane *plane,
@@ -128,7 +128,7 @@ void liftoff_mock_plane_add_compatible_layer(struct liftoff_mock_plane *plane,
 		}
 	}
 
-	assert(0);
+	abort(); // unreachable
 }
 
 uint32_t liftoff_mock_drm_create_fb(struct liftoff_layer *layer)
