@@ -55,6 +55,9 @@ tests = {
 	'priority': [
 		#'basic',
 	],
+	'prop': [
+		'alpha',
+	],
 }
 
 foreach test_name, subtests : tests
