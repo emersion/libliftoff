@@ -212,6 +212,10 @@ bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 
 		plane_prop = plane_get_property(plane, layer_prop->name);
 		if (plane_prop == NULL) {
+			if (strcmp(layer_prop->name, "alpha") == 0 &&
+			    layer_prop->value == 0xFFFF) {
+				continue; /* Layer is completely opaque */
+			}
 			*compatible = false;
 			drmModeAtomicSetCursor(req, cursor);
 			return true;
