@@ -43,7 +43,7 @@ enum plane_prop {
 	PLANE_CRTC_ID,
 };
 
-static const char *plane_props[] = {
+static const char *basic_plane_props[] = {
 	[PLANE_TYPE] = "type",
 	[PLANE_FB_ID] = "FB_ID",
 	[PLANE_CRTC_ID] = "CRTC_ID",
@@ -56,6 +56,13 @@ static const char *plane_props[] = {
 	"SRC_W",
 	"SRC_H",
 };
+
+static const size_t basic_plane_props_len = sizeof(basic_plane_props) /
+					    sizeof(basic_plane_props[0]);
+
+static drmModePropertyRes plane_props[MAX_PLANE_PROPS] = {0};
+
+static size_t plane_props_len = 0;
 
 static void assert_drm_fd(int fd)
 {
@@ -74,10 +81,19 @@ static void assert_drm_fd(int fd)
 int liftoff_mock_drm_open(void)
 {
 	int ret;
+	size_t i;
 
 	assert(mock_pipe[0] < 0);
 	ret = pipe(mock_pipe);
 	assert(ret == 0);
+
+	for (i = 0; i < basic_plane_props_len; i++) {
+		drmModePropertyRes *prop = &plane_props[i];
+		prop->prop_id = 0xB0000000 + i;
+		strncpy(prop->name, basic_plane_props[i], sizeof(prop->name) - 1);
+		/* TODO: fill flags */
+		plane_props_len++;
+	}
 
 	return mock_pipe[0];
 }
@@ -191,7 +207,7 @@ static size_t get_prop_index(uint32_t id)
 	assert((id & 0xFF000000) == 0xB0000000);
 
 	i = id & 0x00FFFFFF;
-	assert(i < sizeof(plane_props) / sizeof(plane_props[0]));
+	assert(i < basic_plane_props_len);
 
 	return i;
 }
@@ -209,7 +225,7 @@ static void apply_atomic_req(drmModeAtomicReq *req)
 		prop_index = get_prop_index(prop->prop_id);
 		plane->prop_values[prop_index] = prop->value;
 		fprintf(stderr, "plane %"PRIu32": setting %s = %"PRIu64"\n",
-			plane->id, plane_props[prop_index], prop->value);
+			plane->id, plane_props[prop_index].name, prop->value);
 	}
 }
 
@@ -364,7 +380,7 @@ drmModeObjectProperties *drmModeObjectGetProperties(int fd, uint32_t obj_id,
 	assert(plane != NULL);
 
 	props = calloc(1, sizeof(*props));
-	props->count_props = sizeof(plane_props) / sizeof(plane_props[0]);
+	props->count_props = basic_plane_props_len;
 	props->props = prop_ids;
 	for (i = 0; i < props->count_props; i++) {
 		prop_ids[i] = 0xB0000000 + i;
@@ -379,21 +395,13 @@ void drmModeFreeObjectProperties(drmModeObjectProperties *props) {
 
 drmModePropertyRes *drmModeGetProperty(int fd, uint32_t id)
 {
-	size_t i;
-	drmModePropertyRes *prop;
-
 	assert_drm_fd(fd);
 
-	i = get_prop_index(id);
-
-	prop = calloc(1, sizeof(*prop));
-	prop->prop_id = id;
-	strncpy(prop->name, plane_props[i], sizeof(prop->name) - 1);
-	return prop;
+	return &plane_props[get_prop_index(id)];
 }
 
 void drmModeFreeProperty(drmModePropertyRes *prop) {
-	free(prop);
+	/* Owned by plane_props */
 }
 
 drmModeAtomicReq *drmModeAtomicAlloc(void)
