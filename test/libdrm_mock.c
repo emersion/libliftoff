@@ -20,6 +20,7 @@ size_t liftoff_mock_commit_count = 0;
 struct liftoff_mock_plane {
 	uint32_t id;
 	struct liftoff_layer *compatible_layers[MAX_LAYERS];
+	bool enabled_props[MAX_PLANE_PROPS];
 	uint64_t prop_values[MAX_PLANE_PROPS];
 };
 
@@ -78,22 +79,43 @@ static void assert_drm_fd(int fd)
 	       stat_got.st_ino == stat_want.st_ino);
 }
 
+static uint32_t register_prop(const drmModePropertyRes *prop)
+{
+	drmModePropertyRes *dst;
+
+	assert(plane_props_len < MAX_PLANE_PROPS);
+	dst = &plane_props[plane_props_len];
+	memcpy(dst, prop, sizeof(*dst));
+	dst->prop_id = 0xB0000000 + plane_props_len;
+	plane_props_len++;
+
+	return dst->prop_id;
+}
+
+static void init_basic_props(void)
+{
+	size_t i;
+
+	if (plane_props_len > 0)
+		return;
+
+	for (i = 0; i < basic_plane_props_len; i++) {
+		drmModePropertyRes prop = {0};
+		strncpy(prop.name, basic_plane_props[i], sizeof(prop.name) - 1);
+		/* TODO: fill flags */
+		register_prop(&prop);
+	}
+}
+
 int liftoff_mock_drm_open(void)
 {
 	int ret;
-	size_t i;
 
 	assert(mock_pipe[0] < 0);
 	ret = pipe(mock_pipe);
 	assert(ret == 0);
 
-	for (i = 0; i < basic_plane_props_len; i++) {
-		drmModePropertyRes *prop = &plane_props[i];
-		prop->prop_id = 0xB0000000 + i;
-		strncpy(prop->name, basic_plane_props[i], sizeof(prop->name) - 1);
-		/* TODO: fill flags */
-		plane_props_len++;
-	}
+	init_basic_props();
 
 	return mock_pipe[0];
 }
@@ -105,6 +127,8 @@ struct liftoff_mock_plane *liftoff_mock_drm_create_plane(int type)
 
 	assert(mock_pipe[0] < 0);
 
+	init_basic_props();
+
 	i = 0;
 	plane = &mock_planes[0];
 	while (plane->id != 0) {
@@ -114,6 +138,11 @@ struct liftoff_mock_plane *liftoff_mock_drm_create_plane(int type)
 
 	plane->id = 0xEE000000 + i;
 	plane->prop_values[PLANE_TYPE] = type;
+
+	for (size_t i = 0; i < basic_plane_props_len; i++) {
+		plane->enabled_props[i] = true;
+	}
+
 	return plane;
 }
 
@@ -207,9 +236,19 @@ static size_t get_prop_index(uint32_t id)
 	assert((id & 0xFF000000) == 0xB0000000);
 
 	i = id & 0x00FFFFFF;
-	assert(i < basic_plane_props_len);
+	assert(i < plane_props_len);
 
 	return i;
+}
+
+uint32_t liftoff_mock_plane_add_property(struct liftoff_mock_plane *plane,
+					 const drmModePropertyRes *prop)
+{
+	uint32_t prop_id;
+
+	prop_id = register_prop(prop);
+	plane->enabled_props[get_prop_index(prop_id)] = true;
+	return prop_id;
 }
 
 static void apply_atomic_req(drmModeAtomicReq *req)
@@ -365,7 +404,6 @@ drmModeObjectProperties *drmModeObjectGetProperties(int fd, uint32_t obj_id,
 	struct liftoff_mock_plane *plane;
 	drmModeObjectProperties *props;
 	size_t i;
-	static uint32_t prop_ids[MAX_PLANE_PROPS];
 
 	assert_drm_fd(fd);
 	assert(obj_type == DRM_MODE_OBJECT_PLANE);
@@ -380,16 +418,21 @@ drmModeObjectProperties *drmModeObjectGetProperties(int fd, uint32_t obj_id,
 	assert(plane != NULL);
 
 	props = calloc(1, sizeof(*props));
-	props->count_props = basic_plane_props_len;
-	props->props = prop_ids;
-	for (i = 0; i < props->count_props; i++) {
-		prop_ids[i] = 0xB0000000 + i;
+	props->props = calloc(plane_props_len, sizeof(uint32_t));
+	props->prop_values = calloc(plane_props_len, sizeof(uint64_t));
+	for (i = 0; i < plane_props_len; i++) {
+		if (!plane->enabled_props[i])
+			continue;
+		props->props[props->count_props] = plane_props[i].prop_id;
+		props->prop_values[props->count_props] = plane->prop_values[i];
+		props->count_props++;
 	}
-	props->prop_values = plane->prop_values;
 	return props;
 }
 
 void drmModeFreeObjectProperties(drmModeObjectProperties *props) {
+	free(props->props);
+	free(props->prop_values);
 	free(props);
 }
 
