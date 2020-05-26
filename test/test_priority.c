@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
 	uint32_t fbs[2];
 	drmModeAtomicReq *req;
 	bool ok;
+	int ret;
 
 	liftoff_log_init(LIFTOFF_SILENT, NULL);
 
@@ -74,6 +75,8 @@ int main(int argc, char *argv[]) {
 
 			ok = liftoff_output_apply(output, req);
 			assert(ok);
+			ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+			assert(ret == 0);
 		}
 
 		assert(liftoff_mock_plane_get_layer(mock_plane) == layer);

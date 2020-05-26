@@ -278,7 +278,7 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 	struct liftoff_layer *layer;
 
 	assert_drm_fd(fd);
-	assert(flags == DRM_MODE_ATOMIC_TEST_ONLY);
+	assert(flags == DRM_MODE_ATOMIC_TEST_ONLY || flags == 0);
 
 	liftoff_mock_commit_count++;
 
@@ -334,7 +334,9 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 		}
 	}
 
-	apply_atomic_req(req);
+	if (!(flags & DRM_MODE_ATOMIC_TEST_ONLY)) {
+		apply_atomic_req(req);
+	}
 
 	return 0;
 }

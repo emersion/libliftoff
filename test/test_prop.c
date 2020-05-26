@@ -36,6 +36,7 @@ int main(int argc, char *argv[]) {
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
 	bool ok;
+	int ret;
 
 	liftoff_log_init(LIFTOFF_DEBUG, NULL);
 
@@ -87,6 +88,8 @@ int main(int argc, char *argv[]) {
 
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
 	assert(liftoff_layer_get_plane_id(layer) == 0);
 	drmModeAtomicFree(req);
 
@@ -99,6 +102,8 @@ int main(int argc, char *argv[]) {
 
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
 	assert(liftoff_layer_get_plane_id(layer) != 0);
 	drmModeAtomicFree(req);
 
@@ -113,6 +118,8 @@ int main(int argc, char *argv[]) {
 
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
 	assert(liftoff_layer_get_plane_id(layer) != 0);
 	drmModeAtomicFree(req);
 

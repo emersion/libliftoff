@@ -607,6 +607,7 @@ static void run_test(struct test_layer *test_layers)
 	struct liftoff_layer *layers[64];
 	drmModeAtomicReq *req;
 	bool ok;
+	int ret;
 	uint32_t plane_id;
 
 	for (i = 0; i < test_setup_len; i++) {
@@ -643,6 +644,8 @@ static void run_test(struct test_layer *test_layers)
 	req = drmModeAtomicAlloc();
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
 	drmModeAtomicFree(req);
 
 	for (i = 0; test_layers[i].width > 0; i++) {
@@ -690,6 +693,7 @@ static void test_basic(void)
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
 	bool ok;
+	int ret;
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
 
@@ -705,6 +709,8 @@ static void test_basic(void)
 	req = drmModeAtomicAlloc();
 	ok = liftoff_output_apply(output, req);
 	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
 	drmModeAtomicFree(req);
 
@@ -723,6 +729,7 @@ static void test_no_fb(bool zero_fb_id)
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
 	bool ok;
+	int ret;
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
 
@@ -740,8 +747,10 @@ static void test_no_fb(bool zero_fb_id)
 
 	req = drmModeAtomicAlloc();
 	ok = liftoff_output_apply(output, req);
-	assert(liftoff_mock_plane_get_layer(mock_plane) == NULL);
 	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
+	assert(liftoff_mock_plane_get_layer(mock_plane) == NULL);
 	drmModeAtomicFree(req);
 
 	liftoff_device_destroy(device);
