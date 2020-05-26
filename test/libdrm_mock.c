@@ -263,8 +263,9 @@ static void apply_atomic_req(drmModeAtomicReq *req)
 		plane = liftoff_mock_drm_get_plane(prop->obj_id);
 		prop_index = get_prop_index(prop->prop_id);
 		plane->prop_values[prop_index] = prop->value;
-		fprintf(stderr, "plane %"PRIu32": setting %s = %"PRIu64"\n",
-			plane->id, plane_props[prop_index].name, prop->value);
+		fprintf(stderr, "libdrm_mock: plane %"PRIu32": "
+			"setting %s = %"PRIu64"\n", plane->id,
+			plane_props[prop_index].name, prop->value);
 	}
 }
 
@@ -299,23 +300,23 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 		has_crtc = crtc_id != 0;
 
 		if (has_fb != has_crtc) {
-			fprintf(stderr, "plane %u: both FB_ID and CRTC_ID must "
-				"be set or unset together (FB_ID = %"PRIu64", "
-				"CRTC_ID = %"PRIu64")\n", plane->id, fb_id,
-				crtc_id);
+			fprintf(stderr, "libdrm_mock: plane %u: both FB_ID and "
+				"CRTC_ID must be set or unset together "
+				"(FB_ID = %"PRIu64", CRTC_ID = %"PRIu64")\n",
+				plane->id, fb_id, crtc_id);
 			return -EINVAL;
 		}
 
 		if (has_fb) {
 			if (crtc_id != liftoff_mock_drm_crtc_id) {
-				fprintf(stderr, "plane %u: invalid CRTC_ID\n",
-					plane->id);
+				fprintf(stderr, "libdrm_mock: plane %u: "
+					"invalid CRTC_ID\n", plane->id);
 				return -EINVAL;
 			}
 			layer = mock_fb_get_layer(fb_id);
 			if (layer == NULL) {
-				fprintf(stderr, "plane %u: invalid FB_ID\n",
-					plane->id);
+				fprintf(stderr, "libdrm_mock: plane %u: "
+					"invalid FB_ID\n", plane->id);
 				return -EINVAL;
 			}
 			found = false;
@@ -326,9 +327,9 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 				}
 			}
 			if (!found) {
-				fprintf(stderr, "plane %u: layer %p is not "
-					"compatible\n", plane->id,
-					(void *)layer);
+				fprintf(stderr, "libdrm_mock: plane %u: "
+					"layer %p is not compatible\n",
+					plane->id, (void *)layer);
 				return -EINVAL;
 			}
 		}
