@@ -57,6 +57,7 @@ tests = {
 	],
 	'prop': [
 		'alpha',
+		'rotation',
 	],
 }
 

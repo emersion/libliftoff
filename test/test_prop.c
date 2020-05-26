@@ -55,6 +55,9 @@ int main(int argc, char *argv[]) {
 	if (strcmp(test_name, "alpha") == 0) {
 		require_prop_value = (uint16_t)(0.5 * 0xFFFF);
 		default_value = 0xFFFF; /* opaque */
+	} else if (strcmp(test_name, "rotation") == 0) {
+		require_prop_value = DRM_MODE_ROTATE_180;
+		default_value = DRM_MODE_ROTATE_0;
 	} else {
 		fprintf(stderr, "no such test: %s\n", test_name);
 		return 1;

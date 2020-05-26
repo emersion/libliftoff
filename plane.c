@@ -216,6 +216,10 @@ bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 			    layer_prop->value == 0xFFFF) {
 				continue; /* Layer is completely opaque */
 			}
+			if (strcmp(layer_prop->name, "rotation") == 0 &&
+			    layer_prop->value == DRM_MODE_ROTATE_0) {
+				continue; /* Layer isn't rotated */
+			}
 			*compatible = false;
 			drmModeAtomicSetCursor(req, cursor);
 			return true;
