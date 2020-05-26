@@ -57,8 +57,9 @@ tests = {
 		#'basic',
 	],
 	'prop': [
-		'alpha',
-		'rotation',
+		'default-alpha',
+		'default-rotation',
+		'ignore-alpha',
 	],
 }
 
