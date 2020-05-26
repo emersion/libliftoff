@@ -345,6 +345,13 @@ bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 
 static bool layer_is_visible(struct liftoff_layer *layer)
 {
+	struct liftoff_layer_property *alpha_prop;
+
+	alpha_prop = layer_get_property(layer, "alpha");
+	if (alpha_prop != NULL && alpha_prop->value == 0) {
+		return false; /* fully transparent */
+	}
+
 	if (layer->force_composition) {
 		return true;
 	} else {
