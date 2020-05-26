@@ -24,8 +24,9 @@ bench_exe = executable(
 tests = {
 	'alloc': [
 		'basic',
-		'no-props',
-		'zero-fb-id',
+		'no-props-fail',
+		'zero-fb-id-fail',
+		'composition-zero-fb-id',
 		'empty',
 		'simple-1x',
 		'simple-1x-fail',

@@ -720,7 +720,7 @@ static void test_basic(void)
 
 /* Checks that the library doesn't allocate a plane for a layer without a
  * non-zero FB_ID set. */
-static void test_no_fb(bool zero_fb_id)
+static void test_no_fb_fail(bool zero_fb_id)
 {
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
@@ -757,6 +757,50 @@ static void test_no_fb(bool zero_fb_id)
 	close(drm_fd);
 }
 
+/* Checks that the library doesn't fallback to composition when a layer doesn't
+ * have a FB. */
+static void test_composition_zero_fb(void)
+{
+	struct liftoff_mock_plane *mock_plane;
+	int drm_fd;
+	struct liftoff_device *device;
+	struct liftoff_output *output;
+	struct liftoff_layer *composition_layer, *layer_with_fb,
+			     *layer_without_fb;
+	drmModeAtomicReq *req;
+	bool ok;
+	int ret;
+
+	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
+
+	drm_fd = liftoff_mock_drm_open();
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
+
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
+	composition_layer = add_layer(output, 0, 0, 1920, 1080);
+	layer_with_fb = add_layer(output, 0, 0, 1920, 1080);
+	layer_without_fb = liftoff_layer_create(output);
+	(void)layer_with_fb;
+
+	liftoff_output_set_composition_layer(output, composition_layer);
+
+	liftoff_mock_plane_add_compatible_layer(mock_plane, composition_layer);
+	liftoff_mock_plane_add_compatible_layer(mock_plane, layer_without_fb);
+	liftoff_mock_plane_add_compatible_layer(mock_plane, layer_with_fb);
+
+	req = drmModeAtomicAlloc();
+	ok = liftoff_output_apply(output, req);
+	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
+	assert(liftoff_mock_plane_get_layer(mock_plane) == layer_with_fb);
+	drmModeAtomicFree(req);
+
+	liftoff_device_destroy(device);
+	close(drm_fd);
+}
+
 int main(int argc, char *argv[]) {
 	const char *test_name;
 	size_t i;
@@ -772,11 +816,14 @@ int main(int argc, char *argv[]) {
 	if (strcmp(test_name, "basic") == 0) {
 		test_basic();
 		return 0;
-	} else if (strcmp(test_name, "no-props") == 0) {
-		test_no_fb(false);
+	} else if (strcmp(test_name, "no-props-fail") == 0) {
+		test_no_fb_fail(false);
 		return 0;
-	} else if (strcmp(test_name, "zero-fb-id") == 0) {
-		test_no_fb(true);
+	} else if (strcmp(test_name, "zero-fb-id-fail") == 0) {
+		test_no_fb_fail(true);
+		return 0;
+	} else if (strcmp(test_name, "composition-zero-fb-id") == 0) {
+		test_composition_zero_fb();
 		return 0;
 	}
 

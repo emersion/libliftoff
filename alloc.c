@@ -343,6 +343,15 @@ bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 	return true;
 }
 
+static bool layer_is_visible(struct liftoff_layer *layer)
+{
+	if (layer->force_composition) {
+		return true;
+	} else {
+		return layer_has_fb(layer);
+	}
+}
+
 bool output_choose_layers(struct liftoff_output *output,
 			  struct alloc_result *result, struct alloc_step *step)
 {
@@ -398,8 +407,8 @@ bool output_choose_layers(struct liftoff_output *output,
 		if (layer->plane != NULL || layer->force_composition) {
 			continue;
 		}
-		if (!layer_has_fb(layer)) {
-			continue; /* no FB set, nothing to display */
+		if (!layer_is_visible(layer)) {
+			continue;
 		}
 		if (!check_layer_plane_compatible(step, layer, plane)) {
 			continue;
@@ -582,6 +591,22 @@ static void log_no_reuse(struct liftoff_output *output)
 	}
 }
 
+static size_t non_composition_layers_length(struct liftoff_output *output)
+{
+	struct liftoff_layer *layer;
+	size_t n;
+
+	n = 0;
+	liftoff_list_for_each(layer, &output->layers, link) {
+		if (layer_is_visible(layer) &&
+		    output->composition_layer != layer) {
+			n++;
+		}
+	}
+
+	return n;
+}
+
 bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 {
 	struct liftoff_device *device;
@@ -644,10 +669,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 	memset(result.best, 0, result.planes_len * sizeof(*result.best));
 	result.has_composition_layer = output->composition_layer != NULL;
 	result.non_composition_layers_len =
-		liftoff_list_length(&output->layers);
-	if (output->composition_layer != NULL) {
-		result.non_composition_layers_len--;
-	}
+		non_composition_layers_length(output);
 	step.plane_link = device->planes.next;
 	step.plane_idx = 0;
 	step.score = 0;
