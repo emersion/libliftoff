@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 199309L
+#define _POSIX_C_SOURCE 200112
 #include <assert.h>
 #include <libliftoff.h>
 #include <stdio.h>
