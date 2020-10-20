@@ -3,7 +3,7 @@ project(
 	'c',
 	version: '0.0.0',
 	license: 'MIT',
-	meson_version: '>=0.47.0',
+	meson_version: '>=0.52.0',
 	default_options: [
 		'c_std=c99',
 		'warning_level=3',
@@ -20,7 +20,7 @@ add_project_arguments(cc.get_supported_arguments([
 
 liftoff_inc = include_directories('include')
 
-drm = dependency('libdrm')
+drm = dependency('libdrm', include_type: 'system')
 
 liftoff_deps = [drm]
 
