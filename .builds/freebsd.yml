@@ -1,0 +1,17 @@
+image: freebsd/latest
+packages:
+- devel/pkgconf
+- graphics/libdrm
+- devel/meson
+sources:
+- https://github.com/emersion/libliftoff
+tasks:
+- setup: |
+    cd libliftoff
+    meson build/ -Dauto_features=enabled
+- build: |
+    cd libliftoff
+    ninja -C build/
+- test: |
+    cd libliftoff
+    ninja -C build/ test
