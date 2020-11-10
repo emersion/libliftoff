@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 
 			liftoff_layer_set_property(layer, "FB_ID", fbs[j % 2]);
 
-			ok = liftoff_output_apply(output, req);
+			ok = liftoff_output_apply(output, req, 0);
 			assert(ok);
 			ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 			assert(ret == 0);

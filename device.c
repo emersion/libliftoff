@@ -84,13 +84,14 @@ void liftoff_device_destroy(struct liftoff_device *device)
 }
 
 bool device_test_commit(struct liftoff_device *device,
-			drmModeAtomicReq *req, bool *compatible)
+			drmModeAtomicReq *req, uint32_t flags, bool *compatible)
 {
 	int ret;
 
 	do {
 		ret = drmModeAtomicCommit(device->drm_fd, req,
-					  DRM_MODE_ATOMIC_TEST_ONLY, NULL);
+					  DRM_MODE_ATOMIC_TEST_ONLY | flags,
+					  NULL);
 	} while (-ret == EINTR || -ret == EAGAIN);
 	if (ret == 0) {
 		*compatible = true;

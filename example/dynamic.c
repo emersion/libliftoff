@@ -91,6 +91,7 @@ static bool draw(void)
 	drmModeAtomicReq *req;
 	int ret, inc;
 	size_t i;
+	uint32_t flags;
 
 	active_layer = &layers[active_layer_idx];
 
@@ -107,14 +108,14 @@ static bool draw(void)
 
 	draw_layer(drm_fd, active_layer);
 
+	flags = DRM_MODE_ATOMIC_NONBLOCK | DRM_MODE_PAGE_FLIP_EVENT;
 	req = drmModeAtomicAlloc();
-	if (!liftoff_output_apply(output, req)) {
+	if (!liftoff_output_apply(output, req, flags)) {
 		perror("liftoff_output_apply");
 		return false;
 	}
 
-	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK |
-				  DRM_MODE_PAGE_FLIP_EVENT, NULL);
+	ret = drmModeAtomicCommit(drm_fd, req, flags, NULL);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
 		return false;

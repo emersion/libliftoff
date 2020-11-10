@@ -80,7 +80,7 @@ static int test_prop_default(const char *prop_name)
 
 	liftoff_layer_set_property(layer, prop.name, require_prop_value);
 
-	ok = liftoff_output_apply(output, req);
+	ok = liftoff_output_apply(output, req, 0);
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
@@ -94,7 +94,7 @@ static int test_prop_default(const char *prop_name)
 
 	liftoff_layer_set_property(layer, prop.name, default_value);
 
-	ok = liftoff_output_apply(output, req);
+	ok = liftoff_output_apply(output, req, 0);
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
@@ -110,7 +110,7 @@ static int test_prop_default(const char *prop_name)
 
 	liftoff_layer_set_property(layer, prop.name, require_prop_value);
 
-	ok = liftoff_output_apply(output, req);
+	ok = liftoff_output_apply(output, req, 0);
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
@@ -148,7 +148,7 @@ static int test_ignore_alpha(void)
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req);
+	ok = liftoff_output_apply(output, req, 0);
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);

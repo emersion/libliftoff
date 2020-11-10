@@ -68,6 +68,7 @@
 /* Global data for the allocation algorithm */
 struct alloc_result {
 	drmModeAtomicReq *req;
+	uint32_t flags;
 	size_t planes_len;
 
 	struct liftoff_layer **best;
@@ -436,7 +437,8 @@ bool output_choose_layers(struct liftoff_output *output,
 			continue;
 		}
 
-		if (!device_test_commit(device, result->req, &compatible)) {
+		if (!device_test_commit(device, result->req, result->flags,
+					&compatible)) {
 			return false;
 		}
 		if (compatible) {
@@ -512,7 +514,7 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 }
 
 static bool reuse_previous_alloc(struct liftoff_output *output,
-				 drmModeAtomicReq *req)
+				 drmModeAtomicReq *req, uint32_t flags)
 {
 	struct liftoff_device *device;
 	struct liftoff_layer *layer;
@@ -536,7 +538,7 @@ static bool reuse_previous_alloc(struct liftoff_output *output,
 	if (!apply_current(device, req)) {
 		return false;
 	}
-	if (!device_test_commit(device, req, &compatible) || !compatible) {
+	if (!device_test_commit(device, req, flags, &compatible) || !compatible) {
 		drmModeAtomicSetCursor(req, cursor);
 		return false;
 	}
@@ -614,7 +616,8 @@ static size_t non_composition_layers_length(struct liftoff_output *output)
 	return n;
 }
 
-bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
+bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
+			  uint32_t flags)
 {
 	struct liftoff_device *device;
 	struct liftoff_plane *plane;
@@ -628,7 +631,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 
 	update_layers_priority(device);
 
-	if (reuse_previous_alloc(output, req)) {
+	if (reuse_previous_alloc(output, req, flags)) {
 		log_reuse(output);
 		return true;
 	}
@@ -658,6 +661,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req)
 	}
 
 	result.req = req;
+	result.flags = flags;
 	result.planes_len = liftoff_list_length(&device->planes);
 
 	step.alloc = malloc(result.planes_len * sizeof(*step.alloc));

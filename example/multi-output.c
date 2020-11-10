@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 	drmModeAtomicReq *req;
 	int ret;
 	size_t i, j;
+	uint32_t flags;
 
 	drm_fd = open("/dev/dri/card0", O_RDWR | O_CLOEXEC);
 	if (drm_fd < 0) {
@@ -153,15 +154,16 @@ int main(int argc, char *argv[])
 		liftoff_layer_set_property(layers[i], "zpos", i);
 	}
 
+	flags = DRM_MODE_ATOMIC_NONBLOCK;
 	req = drmModeAtomicAlloc();
 	for (i = 0; i < outputs_len; i++) {
-		if (!liftoff_output_apply(outputs[i], req)) {
+		if (!liftoff_output_apply(outputs[i], req, flags)) {
 			perror("liftoff_output_apply");
 			return 1;
 		}
 	}
 
-	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK, NULL);
+	ret = drmModeAtomicCommit(drm_fd, req, flags, NULL);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
 		return false;

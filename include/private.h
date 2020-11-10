@@ -81,7 +81,7 @@ struct liftoff_rect {
 };
 
 bool device_test_commit(struct liftoff_device *device,
-			drmModeAtomicReq *req, bool *compatible);
+			drmModeAtomicReq *req, uint32_t flags, bool *compatible);
 
 struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 						  const char *name);

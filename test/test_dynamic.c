@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req);
+	ok = liftoff_output_apply(output, req, 0);
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	ok = liftoff_output_apply(output, req);
+	ok = liftoff_output_apply(output, req, 0);
 	assert(ok);
 	if (want_reuse_prev_alloc) {
 		/* The library should perform only one TEST_ONLY commit with the

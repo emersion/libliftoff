@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
 	drmModeAtomicReq *req;
 	int ret;
 	size_t i;
+	uint32_t flags;
 
 	layers_len = 6;
 	while ((opt = getopt(argc, argv, "l:h")) != -1) {
@@ -192,8 +193,9 @@ int main(int argc, char *argv[])
 
 	liftoff_output_set_composition_layer(output, composition_layer);
 
+	flags = DRM_MODE_ATOMIC_NONBLOCK;
 	req = drmModeAtomicAlloc();
-	if (!liftoff_output_apply(output, req)) {
+	if (!liftoff_output_apply(output, req, flags)) {
 		perror("liftoff_output_apply");
 		return 1;
 	}
@@ -206,7 +208,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	ret = drmModeAtomicCommit(drm_fd, req, DRM_MODE_ATOMIC_NONBLOCK, NULL);
+	ret = drmModeAtomicCommit(drm_fd, req, flags, NULL);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
 		return false;
