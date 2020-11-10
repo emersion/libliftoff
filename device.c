@@ -88,6 +88,7 @@ bool device_test_commit(struct liftoff_device *device,
 {
 	int ret;
 
+	flags &= ~DRM_MODE_PAGE_FLIP_EVENT;
 	do {
 		ret = drmModeAtomicCommit(device->drm_fd, req,
 					  DRM_MODE_ATOMIC_TEST_ONLY | flags,
