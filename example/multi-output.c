@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	ret = drmModeAtomicCommit(drm_fd, req, flags, NULL);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
-		return false;
+		return 1;
 	}
 
 	for (i = 0; i < layers_len; i++) {

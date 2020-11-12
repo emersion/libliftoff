@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 	ret = drmModeAtomicCommit(drm_fd, req, flags, NULL);
 	if (ret < 0) {
 		perror("drmModeAtomicCommit");
-		return false;
+		return 1;
 	}
 
 	printf("Composition layer got assigned to plane %u\n",
