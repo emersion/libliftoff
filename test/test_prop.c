@@ -137,6 +137,10 @@ static int test_ignore_alpha(void)
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
 
+	drmModePropertyRes prop = {0};
+	strncpy(prop.name, "alpha", sizeof(prop.name) - 1);
+	liftoff_mock_plane_add_property(mock_plane, &prop);
+
 	drm_fd = liftoff_mock_drm_open();
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
