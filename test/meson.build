@@ -54,6 +54,7 @@ tests = {
 		'add-layer',
 		'remove-layer',
 		'change-composition-layer',
+		'change-in-fence-fd',
 	],
 	'priority': [
 		#'basic',

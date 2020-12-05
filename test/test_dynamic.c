@@ -156,6 +156,18 @@ static void run_change_composition_layer(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
+static void run_change_in_fence_fd(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "IN_FENCE_FD", 42);
+
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
+	liftoff_layer_set_property(ctx->layer, "IN_FENCE_FD", 43);
+
+	second_commit(ctx, true);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
 static const struct test_case tests[] = {
 	{ .name = "same", .run = run_same },
 	{ .name = "change-fb", .run = run_change_fb },
@@ -164,6 +176,7 @@ static const struct test_case tests[] = {
 	{ .name = "add-layer", .run = run_add_layer },
 	{ .name = "remove-layer", .run = run_remove_layer },
 	{ .name = "change-composition-layer", .run = run_change_composition_layer },
+	{ .name = "change-in-fence-fd", .run = run_change_in_fence_fd },
 };
 
 static void run(const struct test_case *test) {
@@ -178,6 +191,11 @@ static void run(const struct test_case *test) {
 	ctx.mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
 	/* Plane incompatible with all layers */
 	liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_CURSOR);
+
+	const char *prop_name = "IN_FENCE_FD";
+	drmModePropertyRes prop = {0};
+	strncpy(prop.name, prop_name, sizeof(prop.name) - 1);
+	liftoff_mock_plane_add_property(ctx.mock_plane, &prop);
 
 	ctx.drm_fd = liftoff_mock_drm_open();
 	device = liftoff_device_create(ctx.drm_fd);

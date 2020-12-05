@@ -515,6 +515,11 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 			continue;
 		}
 
+		/* We should never need a re-alloc when IN_FENCE_FD changes. */
+		if (strcmp(prop->name, "IN_FENCE_FD") == 0) {
+			continue;
+		}
+
 		/* TODO: if CRTC_{X,Y,W,H} changed but intersection with other
 		 * layers hasn't changed, don't realloc */
 		return true;
