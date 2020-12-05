@@ -127,6 +127,7 @@ static int test_prop_default(const char *prop_name)
 static int test_ignore_alpha(void)
 {
 	struct liftoff_mock_plane *mock_plane;
+	drmModePropertyRes prop = {0};
 	int drm_fd;
 	struct liftoff_device *device;
 	struct liftoff_output *output;
@@ -137,7 +138,6 @@ static int test_ignore_alpha(void)
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
 
-	drmModePropertyRes prop = {0};
 	strncpy(prop.name, "alpha", sizeof(prop.name) - 1);
 	liftoff_mock_plane_add_property(mock_plane, &prop);
 
@@ -165,6 +165,78 @@ static int test_ignore_alpha(void)
 	return 0;
 }
 
+static int test_immutable_zpos(void) {
+	struct liftoff_mock_plane *mock_plane1, *mock_plane2;
+	drmModePropertyRes prop = {0};
+	uint64_t prop_value;
+	int drm_fd;
+	struct liftoff_device *device;
+	struct liftoff_output *output;
+	struct liftoff_layer *layer1, *layer2;
+	drmModeAtomicReq *req;
+	bool ok;
+	int ret;
+
+	mock_plane1 = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_OVERLAY);
+	mock_plane2 = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_OVERLAY);
+
+	strncpy(prop.name, "zpos", sizeof(prop.name) - 1);
+	prop.flags = DRM_MODE_PROP_IMMUTABLE;
+	prop.count_values = 1;
+	prop.values = &prop_value;
+
+	/* Plane 2 is always on top of plane 1, and this is immutable */
+	prop_value = 1;
+	liftoff_mock_plane_add_property(mock_plane1, &prop);
+	prop_value = 2;
+	liftoff_mock_plane_add_property(mock_plane2, &prop);
+
+	drm_fd = liftoff_mock_drm_open();
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
+
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
+	layer1 = add_layer(output, 0, 0, 256, 256);
+	layer2 = add_layer(output, 128, 128, 256, 256);
+
+	/* All layers are compatible with all planes */
+	liftoff_mock_plane_add_compatible_layer(mock_plane1, layer1);
+	liftoff_mock_plane_add_compatible_layer(mock_plane1, layer2);
+	liftoff_mock_plane_add_compatible_layer(mock_plane2, layer1);
+	liftoff_mock_plane_add_compatible_layer(mock_plane2, layer2);
+
+	/* Layer 2 on top of layer 1 */
+	liftoff_layer_set_property(layer1, "zpos", 42);
+	liftoff_layer_set_property(layer2, "zpos", 43);
+
+	req = drmModeAtomicAlloc();
+	ok = liftoff_output_apply(output, req, 0);
+	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
+	assert(liftoff_mock_plane_get_layer(mock_plane1) == layer1);
+	assert(liftoff_mock_plane_get_layer(mock_plane2) == layer2);
+	drmModeAtomicFree(req);
+
+	/* Layer 1 on top of layer 2 */
+	liftoff_layer_set_property(layer1, "zpos", 43);
+	liftoff_layer_set_property(layer2, "zpos", 42);
+
+	req = drmModeAtomicAlloc();
+	ok = liftoff_output_apply(output, req, 0);
+	assert(ok);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
+	assert(liftoff_mock_plane_get_layer(mock_plane1) == layer2);
+	assert(liftoff_mock_plane_get_layer(mock_plane2) == layer1);
+	drmModeAtomicFree(req);
+
+	liftoff_device_destroy(device);
+	close(drm_fd);
+
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	const char *test_name;
 
@@ -182,6 +254,8 @@ int main(int argc, char *argv[]) {
 		return test_prop_default(test_name + strlen(default_test_prefix));
 	} else if (strcmp(test_name, "ignore-alpha") == 0) {
 		return test_ignore_alpha();
+	} else if (strcmp(test_name, "immutable-zpos") == 0) {
+		return test_immutable_zpos();
 	} else {
 		fprintf(stderr, "no such test: %s\n", test_name);
 		return 1;

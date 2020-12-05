@@ -248,6 +248,9 @@ uint32_t liftoff_mock_plane_add_property(struct liftoff_mock_plane *plane,
 
 	prop_id = register_prop(prop);
 	plane->enabled_props[get_prop_index(prop_id)] = true;
+	if (prop->count_values == 1) {
+		plane->prop_values[get_prop_index(prop_id)] = prop->values[0];
+	}
 	return prop_id;
 }
 

@@ -69,6 +69,7 @@ tests = {
 		'default-alpha',
 		'default-rotation',
 		'ignore-alpha',
+		'immutable-zpos',
 	],
 }
 
