@@ -491,9 +491,13 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 	size_t i;
 	struct liftoff_layer_property *prop;
 
+	if (layer->changed) {
+		return true;
+	}
+
 	for (i = 0; i < layer->props_len; i++) {
 		prop = &layer->props[i];
-		if (!prop->changed) {
+		if (prop->value == prop->prev_value) {
 			continue;
 		}
 
@@ -503,7 +507,7 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 		 * non-zero to non-zero, we can try to re-use the previous
 		 * allocation. */
 		if (strcmp(prop->name, "FB_ID") == 0) {
-			if (layer->force_composition || prop->value == 0) {
+			if (prop->value == 0) {
 				return true;
 			}
 			/* TODO: check format/modifier is the same. Check

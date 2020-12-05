@@ -76,32 +76,27 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 		memset(prop, 0, sizeof(*prop));
 		strncpy(prop->name, name, sizeof(prop->name) - 1);
 
-		prop->changed = true;
-	} else {
-		prop->changed = prop->value != value;
+		layer->changed = true;
 	}
 
 	prop->value = value;
 
-	if (strcmp(name, "FB_ID") == 0) {
+	if (strcmp(name, "FB_ID") == 0 && layer->force_composition) {
 		layer->force_composition = false;
-		prop->changed = true;
+		layer->changed = true;
 	}
 }
 
 void liftoff_layer_set_fb_composited(struct liftoff_layer *layer)
 {
-	struct liftoff_layer_property *prop;
-
 	if (layer->force_composition) {
 		return;
 	}
 
 	liftoff_layer_set_property(layer, "FB_ID", 0);
-	prop = layer_get_property(layer, "FB_ID");
-	prop->changed = true;
 
 	layer->force_composition = true;
+	layer->changed = true;
 }
 
 uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer)
@@ -142,8 +137,10 @@ void layer_mark_clean(struct liftoff_layer *layer)
 {
 	size_t i;
 
+	layer->changed = false;
+
 	for (i = 0; i < layer->props_len; i++) {
-		layer->props[i].changed = false;
+		layer->props[i].prev_value = layer->props[i].value;
 	}
 }
 
@@ -161,10 +158,9 @@ static void log_priority(struct liftoff_layer *layer)
 void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
 	struct liftoff_layer_property *prop;
 
-	/* TODO: also bump priority when updating other
-	 * properties */
+	/* TODO: also bump priority when updating other properties */
 	prop = layer_get_property(layer, "FB_ID");
-	if (prop != NULL && prop->changed) {
+	if (prop != NULL && prop->prev_value != prop->value) {
 		layer->pending_priority++;
 	}
 

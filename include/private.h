@@ -48,12 +48,13 @@ struct liftoff_layer {
 	struct liftoff_plane *plane;
 
 	int current_priority, pending_priority;
+	/* prop added or force_composition changed */
+	bool changed;
 };
 
 struct liftoff_layer_property {
 	char name[DRM_PROP_NAME_LEN];
-	uint64_t value;
-	bool changed;
+	uint64_t value, prev_value;
 };
 
 struct liftoff_plane {
