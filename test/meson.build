@@ -48,7 +48,7 @@ tests = {
 	],
 	'dynamic': [
 		'same',
-		'fb',
+		'change-fb',
 		'add-layer',
 		'remove-layer',
 		'change-composition-layer',

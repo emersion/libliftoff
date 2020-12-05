@@ -5,6 +5,19 @@
 #include <string.h>
 #include "libdrm_mock.h"
 
+struct context {
+	int drm_fd;
+	struct liftoff_output *output;
+	struct liftoff_mock_plane *mock_plane;
+	struct liftoff_layer *layer, *other_layer;
+	size_t commit_count;
+};
+
+struct test_case {
+	const char *name;
+	void (*run)(struct context *ctx);
+};
+
 static struct liftoff_layer *add_layer(struct liftoff_output *output,
 				       int x, int y, int width, int height)
 {
@@ -26,18 +39,129 @@ static struct liftoff_layer *add_layer(struct liftoff_output *output,
 	return layer;
 }
 
-int main(int argc, char *argv[]) {
-	const char *test_name;
-	struct liftoff_mock_plane *mock_plane;
-	int drm_fd;
-	struct liftoff_device *device;
-	struct liftoff_output *output;
-	struct liftoff_layer *layer, *other_layer;
+static void first_commit(struct context *ctx) {
 	drmModeAtomicReq *req;
 	bool ok;
 	int ret;
-	size_t commit_count;
-	bool want_reuse_prev_alloc;
+
+	assert(ctx->commit_count == 0);
+
+	req = drmModeAtomicAlloc();
+	ok = liftoff_output_apply(ctx->output, req, 0);
+	assert(ok);
+	ret = drmModeAtomicCommit(ctx->drm_fd, req, 0, NULL);
+	assert(ret == 0);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+	drmModeAtomicFree(req);
+
+	ctx->commit_count = liftoff_mock_commit_count;
+	/* We need to check whether the library can re-use old configurations
+	 * with a single atomic commit. If we don't have enough planes/layers,
+	 * the library will find a plane allocation in a single commit and we
+	 * won't be able to tell the difference between a re-use and a complete
+	 * run. */
+	assert(ctx->commit_count > 1);
+}
+
+static void second_commit(struct context *ctx, bool want_reuse_prev_alloc) {
+	drmModeAtomicReq *req;
+	bool ok;
+	int ret;
+
+	req = drmModeAtomicAlloc();
+	ok = liftoff_output_apply(ctx->output, req, 0);
+	assert(ok);
+	if (want_reuse_prev_alloc) {
+		/* The library should perform only one TEST_ONLY commit with the
+		 * previous plane allocation. */
+		assert(liftoff_mock_commit_count == ctx->commit_count + 1);
+	} else {
+		/* Since there are at least two planes, the library should
+		 * perform more than one TEST_ONLY commit. */
+		assert(liftoff_mock_commit_count > ctx->commit_count + 1);
+	}
+	ret = drmModeAtomicCommit(ctx->drm_fd, req, 0, NULL);
+	assert(ret == 0);
+	drmModeAtomicFree(req);
+}
+
+static void run_same(struct context *ctx) {
+	first_commit(ctx);
+	second_commit(ctx, true);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_change_fb(struct context *ctx) {
+	first_commit(ctx);
+	liftoff_layer_set_property(ctx->layer, "FB_ID",
+				   liftoff_mock_drm_create_fb(ctx->layer));
+	second_commit(ctx, true);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_add_layer(struct context *ctx) {
+	first_commit(ctx);
+	add_layer(ctx->output, 0, 0, 256, 256);
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_remove_layer(struct context *ctx) {
+	first_commit(ctx);
+	liftoff_layer_destroy(ctx->other_layer);
+	ctx->other_layer = NULL;
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_change_composition_layer(struct context *ctx) {
+	first_commit(ctx);
+	liftoff_output_set_composition_layer(ctx->output, ctx->layer);
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static const struct test_case tests[] = {
+	{ .name = "same", .run = run_same },
+	{ .name = "change-fb", .run = run_change_fb },
+	{ .name = "add-layer", .run = run_add_layer },
+	{ .name = "remove-layer", .run = run_remove_layer },
+	{ .name = "change-composition-layer", .run = run_change_composition_layer },
+};
+
+static void run(const struct test_case *test) {
+	struct context ctx = {0};
+	struct liftoff_device *device;
+
+	/* Always create two planes: a primary plane only compatible with
+	 * `layer`, and a cursor plane incompatible with any layer. Always
+	 * create 3 layers: `layer`, `other_layer`, and an unnamed third layer.
+	 */
+
+	ctx.mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
+	/* Plane incompatible with all layers */
+	liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_CURSOR);
+
+	ctx.drm_fd = liftoff_mock_drm_open();
+	device = liftoff_device_create(ctx.drm_fd);
+	assert(device != NULL);
+
+	ctx.output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
+	ctx.layer = add_layer(ctx.output, 0, 0, 1920, 1080);
+	/* Layers incompatible with all planes */
+	ctx.other_layer = add_layer(ctx.output, 0, 0, 256, 256);
+	add_layer(ctx.output, 0, 0, 256, 256);
+
+	liftoff_mock_plane_add_compatible_layer(ctx.mock_plane, ctx.layer);
+
+	test->run(&ctx);
+
+	liftoff_device_destroy(device);
+	close(ctx.drm_fd);
+}
+
+int main(int argc, char *argv[]) {
+	const char *test_name;
 
 	liftoff_log_init(LIFTOFF_DEBUG, NULL);
 
@@ -47,80 +171,13 @@ int main(int argc, char *argv[]) {
 	}
 	test_name = argv[1];
 
-	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
-	/* Plane incompatible with all layers */
-	liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_CURSOR);
-
-	drm_fd = liftoff_mock_drm_open();
-	device = liftoff_device_create(drm_fd);
-	assert(device != NULL);
-
-	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
-	layer = add_layer(output, 0, 0, 1920, 1080);
-	/* Layers incompatible with all planes */
-	other_layer = add_layer(output, 0, 0, 256, 256);
-	add_layer(output, 0, 0, 256, 256);
-
-	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
-
-	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
-	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
-	assert(ret == 0);
-	assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
-	drmModeAtomicFree(req);
-
-	commit_count = liftoff_mock_commit_count;
-	/* We need to check whether the library can re-use old configurations
-	 * with a single atomic commit. If we don't have enough planes/layers,
-	 * the library will find a plane allocation in a single commit and we
-	 * won't be able to tell the difference between a re-use and a complete
-	 * run. */
-	assert(commit_count > 1);
-
-	req = drmModeAtomicAlloc();
-
-	want_reuse_prev_alloc = true;
-	if (strcmp(test_name, "same") == 0) {
-		// This space is intentionally left blank
-	} else if (strcmp(test_name, "fb") == 0) {
-		liftoff_layer_set_property(layer, "FB_ID",
-					   liftoff_mock_drm_create_fb(layer));
-	} else if (strcmp(test_name, "add-layer") == 0) {
-		add_layer(output, 0, 0, 256, 256);
-		want_reuse_prev_alloc = false;
-	} else if (strcmp(test_name, "remove-layer") == 0) {
-		liftoff_layer_destroy(other_layer);
-		other_layer = NULL;
-		want_reuse_prev_alloc = false;
-	} else if (strcmp(test_name, "change-composition-layer") == 0) {
-		liftoff_output_set_composition_layer(output, layer);
-		want_reuse_prev_alloc = false;
-	} else {
-		fprintf(stderr, "no such test: %s\n", test_name);
-		return 1;
+	for (size_t i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
+		if (strcmp(test_name, tests[i].name) == 0) {
+			run(&tests[i]);
+			return 0;
+		}
 	}
 
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
-	if (want_reuse_prev_alloc) {
-		/* The library should perform only one TEST_ONLY commit with the
-		 * previous plane allocation. */
-		assert(liftoff_mock_commit_count == commit_count + 1);
-	} else {
-		/* Since there are at least two planes, the library should
-		 * perform more than one TEST_ONLY commit. */
-		assert(liftoff_mock_commit_count > commit_count + 1);
-	}
-	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
-	assert(ret == 0);
-	assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
-
-	drmModeAtomicFree(req);
-
-	liftoff_device_destroy(device);
-	close(drm_fd);
-
-	return 0;
+	fprintf(stderr, "no such test: %s\n", test_name);
+	return 1;
 }
