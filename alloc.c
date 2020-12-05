@@ -526,8 +526,10 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 			continue;
 		}
 
-		/* We should never need a re-alloc when IN_FENCE_FD changes. */
-		if (strcmp(prop->name, "IN_FENCE_FD") == 0) {
+		/* We should never need a re-alloc when IN_FENCE_FD or
+		 * FB_DAMAGE_CLIPS changes. */
+		if (strcmp(prop->name, "IN_FENCE_FD") == 0 ||
+		    strcmp(prop->name, "FB_DAMAGE_CLIPS") == 0) {
 			continue;
 		}
 

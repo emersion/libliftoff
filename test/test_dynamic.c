@@ -228,6 +228,18 @@ static void run_change_in_fence_fd(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
+static void run_change_fb_damage_clips(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "FB_DAMAGE_CLIPS", 42);
+
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
+	liftoff_layer_set_property(ctx->layer, "FB_DAMAGE_CLIPS", 43);
+
+	second_commit(ctx, true);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
 static const struct test_case tests[] = {
 	{ .name = "same", .run = run_same },
 	{ .name = "change-fb", .run = run_change_fb },
@@ -242,6 +254,7 @@ static const struct test_case tests[] = {
 	{ .name = "unset-alpha-to-opaque", .run = run_unset_alpha_to_opaque },
 	{ .name = "unset-alpha-to-transparent", .run = run_unset_alpha_to_transparent },
 	{ .name = "change-in-fence-fd", .run = run_change_in_fence_fd },
+	{ .name = "change-fb-damage-clips", .run = run_change_fb_damage_clips },
 };
 
 static void run(const struct test_case *test) {
@@ -265,6 +278,11 @@ static void run(const struct test_case *test) {
 	liftoff_mock_plane_add_property(ctx.mock_plane, &prop);
 
 	prop_name = "IN_FENCE_FD";
+	prop = (drmModePropertyRes){0};
+	strncpy(prop.name, prop_name, sizeof(prop.name) - 1);
+	liftoff_mock_plane_add_property(ctx.mock_plane, &prop);
+
+	prop_name = "FB_DAMAGE_CLIPS";
 	prop = (drmModePropertyRes){0};
 	strncpy(prop.name, prop_name, sizeof(prop.name) - 1);
 	liftoff_mock_plane_add_property(ctx.mock_plane, &prop);

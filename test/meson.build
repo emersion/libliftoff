@@ -60,6 +60,7 @@ tests = {
 		'unset-alpha-to-opaque',
 		'unset-alpha-to-transparent',
 		'change-in-fence-fd',
+		'change-fb-damage-clips',
 	],
 	'priority': [
 		#'basic',
