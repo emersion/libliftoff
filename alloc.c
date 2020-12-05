@@ -496,12 +496,18 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 		if (!prop->changed) {
 			continue;
 		}
+
+		/* If FB_ID changes from non-zero to zero, we don't need to
+		 * display this layer anymore, so we may be able to re-use its
+		 * plane for another layer. If FB_ID changes from
+		 * non-zero to non-zero, we can try to re-use the previous
+		 * allocation. */
 		if (strcmp(prop->name, "FB_ID") == 0) {
-			if (layer->force_composition) {
+			if (layer->force_composition || prop->value == 0) {
 				return true;
 			}
 			/* TODO: check format/modifier is the same. Check
-			 * previous/next value isn't zero. */
+			 * previous value isn't zero. */
 			continue;
 		}
 
