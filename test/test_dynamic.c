@@ -51,7 +51,6 @@ static void first_commit(struct context *ctx) {
 	assert(ok);
 	ret = drmModeAtomicCommit(ctx->drm_fd, req, 0, NULL);
 	assert(ret == 0);
-	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 	drmModeAtomicFree(req);
 
 	ctx->commit_count = liftoff_mock_commit_count;
@@ -87,36 +86,72 @@ static void second_commit(struct context *ctx, bool want_reuse_prev_alloc) {
 
 static void run_same(struct context *ctx) {
 	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
 	second_commit(ctx, true);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
 static void run_change_fb(struct context *ctx) {
 	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
 	liftoff_layer_set_property(ctx->layer, "FB_ID",
 				   liftoff_mock_drm_create_fb(ctx->layer));
+
 	second_commit(ctx, true);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_unset_fb(struct context *ctx) {
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
+	liftoff_layer_set_property(ctx->layer, "FB_ID", 0);
+
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == NULL);
+}
+
+static void run_set_fb(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "FB_ID", 0);
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == NULL);
+
+	liftoff_layer_set_property(ctx->layer, "FB_ID",
+				   liftoff_mock_drm_create_fb(ctx->layer));
+
+	second_commit(ctx, false);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
 static void run_add_layer(struct context *ctx) {
 	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
 	add_layer(ctx->output, 0, 0, 256, 256);
+
 	second_commit(ctx, false);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
 static void run_remove_layer(struct context *ctx) {
 	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
 	liftoff_layer_destroy(ctx->other_layer);
 	ctx->other_layer = NULL;
+
 	second_commit(ctx, false);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
 static void run_change_composition_layer(struct context *ctx) {
 	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
 	liftoff_output_set_composition_layer(ctx->output, ctx->layer);
+
 	second_commit(ctx, false);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
@@ -124,6 +159,8 @@ static void run_change_composition_layer(struct context *ctx) {
 static const struct test_case tests[] = {
 	{ .name = "same", .run = run_same },
 	{ .name = "change-fb", .run = run_change_fb },
+	{ .name = "unset-fb", .run = run_unset_fb },
+	{ .name = "set-fb", .run = run_set_fb },
 	{ .name = "add-layer", .run = run_add_layer },
 	{ .name = "remove-layer", .run = run_remove_layer },
 	{ .name = "change-composition-layer", .run = run_change_composition_layer },
