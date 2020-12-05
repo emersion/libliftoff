@@ -156,6 +156,66 @@ static void run_change_composition_layer(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
+static void run_change_alpha(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "alpha", 42);
+
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
+	liftoff_layer_set_property(ctx->layer, "alpha", 43);
+
+	second_commit(ctx, true);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_set_alpha_from_opaque(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "alpha", 0xFFFF); /* opaque */
+
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
+	liftoff_layer_set_property(ctx->layer, "alpha", 42);
+
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_set_alpha_from_transparent(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "alpha", 0); /* transparent */
+
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == NULL);
+
+	liftoff_layer_set_property(ctx->layer, "alpha", 42);
+
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_unset_alpha_to_opaque(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "alpha", 42);
+
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
+	liftoff_layer_set_property(ctx->layer, "alpha", 0xFFFF); /* opaque */
+
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+}
+
+static void run_unset_alpha_to_transparent(struct context *ctx) {
+	liftoff_layer_set_property(ctx->layer, "alpha", 42);
+
+	first_commit(ctx);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
+
+	liftoff_layer_set_property(ctx->layer, "alpha", 0); /* transparent */
+
+	second_commit(ctx, false);
+	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == NULL);
+}
+
 static void run_change_in_fence_fd(struct context *ctx) {
 	liftoff_layer_set_property(ctx->layer, "IN_FENCE_FD", 42);
 
@@ -176,12 +236,19 @@ static const struct test_case tests[] = {
 	{ .name = "add-layer", .run = run_add_layer },
 	{ .name = "remove-layer", .run = run_remove_layer },
 	{ .name = "change-composition-layer", .run = run_change_composition_layer },
+	{ .name = "change-alpha", .run = run_change_alpha },
+	{ .name = "set-alpha-from-opaque", .run = run_set_alpha_from_opaque },
+	{ .name = "set-alpha-from-transparent", .run = run_set_alpha_from_transparent },
+	{ .name = "unset-alpha-to-opaque", .run = run_unset_alpha_to_opaque },
+	{ .name = "unset-alpha-to-transparent", .run = run_unset_alpha_to_transparent },
 	{ .name = "change-in-fence-fd", .run = run_change_in_fence_fd },
 };
 
 static void run(const struct test_case *test) {
 	struct context ctx = {0};
 	struct liftoff_device *device;
+	const char *prop_name;
+	drmModePropertyRes prop;
 
 	/* Always create two planes: a primary plane only compatible with
 	 * `layer`, and a cursor plane incompatible with any layer. Always
@@ -192,8 +259,13 @@ static void run(const struct test_case *test) {
 	/* Plane incompatible with all layers */
 	liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_CURSOR);
 
-	const char *prop_name = "IN_FENCE_FD";
-	drmModePropertyRes prop = {0};
+	prop_name = "alpha";
+	prop = (drmModePropertyRes){0};
+	strncpy(prop.name, prop_name, sizeof(prop.name) - 1);
+	liftoff_mock_plane_add_property(ctx.mock_plane, &prop);
+
+	prop_name = "IN_FENCE_FD";
+	prop = (drmModePropertyRes){0};
 	strncpy(prop.name, prop_name, sizeof(prop.name) - 1);
 	liftoff_mock_plane_add_property(ctx.mock_plane, &prop);
 

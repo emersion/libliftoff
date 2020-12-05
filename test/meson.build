@@ -54,6 +54,11 @@ tests = {
 		'add-layer',
 		'remove-layer',
 		'change-composition-layer',
+		'change-alpha',
+		'set-alpha-from-opaque',
+		'set-alpha-from-transparent',
+		'unset-alpha-to-opaque',
+		'unset-alpha-to-transparent',
 		'change-in-fence-fd',
 	],
 	'priority': [

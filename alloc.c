@@ -515,6 +515,17 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 			continue;
 		}
 
+		/* If the layer was or becomes completely transparent or
+		 * completely opaque, we might be able to find a better
+		 * allocation. Otherwise, we can keep the current one. */
+		if (strcmp(prop->name, "alpha") == 0) {
+			if (prop->value == 0 || prop->prev_value == 0 ||
+			    prop->value == 0xFFFF || prop->prev_value == 0xFFFF) {
+				return true;
+			}
+			continue;
+		}
+
 		/* We should never need a re-alloc when IN_FENCE_FD changes. */
 		if (strcmp(prop->name, "IN_FENCE_FD") == 0) {
 			continue;
