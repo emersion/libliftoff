@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 
 	/* Composite layers that didn't make it into a plane */
 	for (i = 1; i < layers_len; i++) {
-		if (liftoff_layer_get_plane(layers[i]) == NULL) {
+		if (liftoff_layer_needs_composition(layers[i])) {
 			composite(drm_fd, &composition_fb, &fbs[i],
 				  i * 100, i * 100);
 		}
