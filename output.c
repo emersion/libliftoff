@@ -55,6 +55,19 @@ void liftoff_output_set_composition_layer(struct liftoff_output *output,
 	output->composition_layer = layer;
 }
 
+bool liftoff_output_needs_composition(struct liftoff_output *output)
+{
+	struct liftoff_layer *layer;
+
+	liftoff_list_for_each(layer, &output->layers, link) {
+		if (liftoff_layer_needs_composition(layer)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void output_log_layers(struct liftoff_output *output) {
 	struct liftoff_layer *layer;
 	size_t i;
