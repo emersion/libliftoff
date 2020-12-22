@@ -14,8 +14,7 @@ struct liftoff_layer;
 /**
  * Initialize libliftoff for a DRM node.
  *
- * The node is expected to have DRM_CLIENT_CAP_UNIVERSAL_PLANES and
- * DRM_CLIENT_CAP_ATOMIC enabled.
+ * The node is expected to have DRM_CLIENT_CAP_ATOMIC enabled.
  */
 struct liftoff_device *liftoff_device_create(int drm_fd);
 /**

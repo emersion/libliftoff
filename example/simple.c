@@ -83,10 +83,6 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	if (drmSetClientCap(drm_fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) < 0) {
-		perror("drmSetClientCap(UNIVERSAL_PLANES)");
-		return 1;
-	}
 	if (drmSetClientCap(drm_fd, DRM_CLIENT_CAP_ATOMIC, 1) < 0) {
 		perror("drmSetClientCap(ATOMIC)");
 		return 1;
