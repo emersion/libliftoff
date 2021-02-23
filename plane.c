@@ -30,7 +30,8 @@ static int guess_plane_zpos_from_type(struct liftoff_device *device,
 	return 0;
 }
 
-struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
+struct liftoff_plane *liftoff_plane_create(struct liftoff_device *device,
+					   uint32_t id)
 {
 	struct liftoff_plane *plane, *cur;
 	drmModePlane *drm_plane;
@@ -40,6 +41,14 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 	struct liftoff_plane_property *prop;
 	uint64_t value;
 	bool has_type = false, has_zpos = false;
+
+	liftoff_list_for_each(plane, &device->planes, link) {
+		if (plane->id == id) {
+			liftoff_log(LIFTOFF_ERROR, "tried to register plane "
+				    "%"PRIu32" twice\n", id);
+			return NULL;
+		}
+	}
 
 	plane = calloc(1, sizeof(*plane));
 	if (plane == NULL) {
@@ -128,7 +137,7 @@ struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id)
 	return plane;
 }
 
-void plane_destroy(struct liftoff_plane *plane)
+void liftoff_plane_destroy(struct liftoff_plane *plane)
 {
 	if (plane->layer != NULL) {
 		plane->layer->plane = NULL;

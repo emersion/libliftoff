@@ -629,6 +629,8 @@ static void run_test(struct test_layer *test_layers)
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
 
+	liftoff_device_register_all_planes(device);
+
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	for (i = 0; test_layers[i].width > 0; i++) {
 		test_layer = &test_layers[i];
@@ -712,6 +714,8 @@ static void test_basic(void)
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
 
+	liftoff_device_register_all_planes(device);
+
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = add_layer(output, 0, 0, 1920, 1080);
 
@@ -747,6 +751,8 @@ static void test_no_fb_fail(bool zero_fb_id)
 	drm_fd = liftoff_mock_drm_open();
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
+
+	liftoff_device_register_all_planes(device);
 
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = liftoff_layer_create(output);
@@ -787,6 +793,8 @@ static void test_composition_zero_fb(void)
 	drm_fd = liftoff_mock_drm_open();
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
+
+	liftoff_device_register_all_planes(device);
 
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	composition_layer = add_layer(output, 0, 0, 1920, 1080);

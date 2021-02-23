@@ -10,6 +10,7 @@
 struct liftoff_device;
 struct liftoff_output;
 struct liftoff_layer;
+struct liftoff_plane;
 
 /**
  * Initialize libliftoff for a DRM node.
@@ -24,6 +25,28 @@ struct liftoff_device *liftoff_device_create(int drm_fd);
  * The caller is expected to destroy the outputs and layers explicitly.
  */
 void liftoff_device_destroy(struct liftoff_device *device);
+/**
+ * Register all available hardware planes to be managed by the libliftoff
+ * device.
+ *
+ * Users should call this function if they don't manually set any plane property
+ * and instead use libliftoff layers.
+ */
+bool liftoff_device_register_all_planes(struct liftoff_device *device);
+
+/**
+ * Register a hardware plane to be managed by the libliftoff device.
+ *
+ * Users should call this function for each plane they don't want to manually
+ * manage. Registering the same plane twice is an error.
+ */
+struct liftoff_plane *liftoff_plane_create(struct liftoff_device *device,
+					   uint32_t plane_id);
+/**
+ * Unregister a hardware plane.
+ */
+void liftoff_plane_destroy(struct liftoff_plane *plane);
+
 /**
  * Build a layer to plane mapping and append the plane configuration to `req`.
  *

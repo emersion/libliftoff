@@ -50,6 +50,8 @@ int main(int argc, char *argv[]) {
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
 
+	liftoff_device_register_all_planes(device);
+
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layers[0] = add_layer(output, 0, 0, 1920, 1080);
 	layers[1] = add_layer(output, 0, 0, 1920, 1080);

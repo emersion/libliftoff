@@ -9,8 +9,6 @@ struct liftoff_device *liftoff_device_create(int drm_fd)
 {
 	struct liftoff_device *device;
 	drmModeRes *drm_res;
-	drmModePlaneRes *drm_plane_res;
-	uint32_t i;
 
 	device = calloc(1, sizeof(*device));
 	if (device == NULL) {
@@ -48,22 +46,6 @@ struct liftoff_device *liftoff_device_create(int drm_fd)
 
 	drmModeFreeResources(drm_res);
 
-	/* TODO: allow users to choose which layers to hand over */
-	drm_plane_res = drmModeGetPlaneResources(drm_fd);
-	if (drm_plane_res == NULL) {
-		liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetPlaneResources");
-		liftoff_device_destroy(device);
-		return NULL;
-	}
-
-	for (i = 0; i < drm_plane_res->count_planes; i++) {
-		if (plane_create(device, drm_plane_res->planes[i]) == NULL) {
-			liftoff_device_destroy(device);
-			return NULL;
-		}
-	}
-	drmModeFreePlaneResources(drm_plane_res);
-
 	return device;
 }
 
@@ -77,10 +59,31 @@ void liftoff_device_destroy(struct liftoff_device *device)
 
 	close(device->drm_fd);
 	liftoff_list_for_each_safe(plane, tmp, &device->planes, link) {
-		plane_destroy(plane);
+		liftoff_plane_destroy(plane);
 	}
 	free(device->crtcs);
 	free(device);
+}
+
+bool liftoff_device_register_all_planes(struct liftoff_device *device)
+{
+	drmModePlaneRes *drm_plane_res;
+	uint32_t i;
+
+	drm_plane_res = drmModeGetPlaneResources(device->drm_fd);
+	if (drm_plane_res == NULL) {
+		liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetPlaneResources");
+		return false;
+	}
+
+	for (i = 0; i < drm_plane_res->count_planes; i++) {
+		if (liftoff_plane_create(device, drm_plane_res->planes[i]) == NULL) {
+			return false;
+		}
+	}
+	drmModeFreePlaneResources(drm_plane_res);
+
+	return true;
 }
 
 bool device_test_commit(struct liftoff_device *device,

@@ -93,8 +93,6 @@ void layer_update_priority(struct liftoff_layer *layer, bool make_current);
 bool layer_has_fb(struct liftoff_layer *layer);
 bool layer_is_visible(struct liftoff_layer *layer);
 
-struct liftoff_plane *plane_create(struct liftoff_device *device, uint32_t id);
-void plane_destroy(struct liftoff_plane *plane);
 struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
 						  const char *name);
 bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
