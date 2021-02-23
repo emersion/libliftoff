@@ -68,6 +68,8 @@ static int test_prop_default(const char *prop_name)
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
 
+	liftoff_device_register_all_planes(device);
+
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = add_layer(output, 0, 0, 1920, 1080);
 
@@ -145,6 +147,8 @@ static int test_ignore_alpha(void)
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
 
+	liftoff_device_register_all_planes(device);
+
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer = add_layer(output, 0, 0, 1920, 1080);
 	liftoff_layer_set_property(layer, "alpha", 0); /* fully transparent */
@@ -194,6 +198,8 @@ static int test_immutable_zpos(void) {
 	drm_fd = liftoff_mock_drm_open();
 	device = liftoff_device_create(drm_fd);
 	assert(device != NULL);
+
+	liftoff_device_register_all_planes(device);
 
 	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	layer1 = add_layer(output, 0, 0, 256, 256);

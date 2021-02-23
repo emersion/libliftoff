@@ -97,6 +97,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	liftoff_device_register_all_planes(device);
+
 	drm_res = drmModeGetResources(drm_fd);
 
 	outputs_len = 0;

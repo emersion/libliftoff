@@ -291,6 +291,8 @@ static void run(const struct test_case *test) {
 	device = liftoff_device_create(ctx.drm_fd);
 	assert(device != NULL);
 
+	liftoff_device_register_all_planes(device);
+
 	ctx.output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
 	ctx.layer = add_layer(ctx.output, 0, 0, 1920, 1080);
 	/* Layers incompatible with all planes */

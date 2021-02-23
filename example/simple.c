@@ -94,6 +94,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	liftoff_device_register_all_planes(device);
+
 	drm_res = drmModeGetResources(drm_fd);
 	connector = pick_connector(drm_fd, drm_res);
 	crtc = pick_crtc(drm_fd, drm_res, connector);
