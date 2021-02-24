@@ -1,5 +1,5 @@
 project(
-	'liftoff',
+	'libliftoff',
 	'c',
 	version: '0.0.0',
 	license: 'MIT',
@@ -25,7 +25,7 @@ drm = dependency('libdrm', include_type: 'system')
 liftoff_deps = [drm]
 
 liftoff_lib = library(
-	meson.project_name(),
+	'liftoff',
 	files(
 		'alloc.c',
 		'device.c',
