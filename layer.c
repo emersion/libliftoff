@@ -177,3 +177,19 @@ bool layer_has_fb(struct liftoff_layer *layer) {
 	fb_id_prop = layer_get_property(layer, "FB_ID");
 	return fb_id_prop != NULL && fb_id_prop->value != 0;
 }
+
+bool layer_is_visible(struct liftoff_layer *layer)
+{
+	struct liftoff_layer_property *alpha_prop;
+
+	alpha_prop = layer_get_property(layer, "alpha");
+	if (alpha_prop != NULL && alpha_prop->value == 0) {
+		return false; /* fully transparent */
+	}
+
+	if (layer->force_composition) {
+		return true;
+	} else {
+		return layer_has_fb(layer);
+	}
+}
