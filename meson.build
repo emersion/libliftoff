@@ -51,7 +51,7 @@ install_headers('include/libliftoff.h')
 
 pkgconfig = import('pkgconfig')
 pkgconfig.generate(
-	libraries: liftoff_lib,
+	liftoff_lib,
 	version: meson.project_version(),
 	filebase: meson.project_name(),
 	name: meson.project_name(),
