@@ -5,8 +5,8 @@
 Lightweight hardware composer library for libdrm.
 
 libliftoff eases the use of KMS planes from userspace without standing in your
-way.  Users create "virtual planes" called layers, set KMS properties on them,
-and libliftoff will allocate planes for these layers if possible.
+way. Users create "virtual planes" called layers, set KMS properties on them,
+and libliftoff will pick planes for these layers if possible.
 
 Resources:
 
@@ -22,7 +22,8 @@ Depends on libdrm. Requires universal planes and atomic.
 
 ## Usage
 
-See [`liftoff.h`][liftoff.h]. Here's the general idea:
+See [`liftoff.h`][liftoff.h] and the `example/` directory. Here's the general
+idea:
 
 ```c
 struct liftoff_device *device;
