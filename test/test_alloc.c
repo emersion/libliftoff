@@ -805,7 +805,7 @@ int main(int argc, char *argv[]) {
 	const char *test_name;
 	size_t i;
 
-	liftoff_log_init(LIFTOFF_DEBUG, NULL);
+	liftoff_log_set_priority(LIFTOFF_DEBUG);
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s <test-name>\n", argv[0]);

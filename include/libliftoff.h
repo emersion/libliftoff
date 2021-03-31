@@ -98,23 +98,28 @@ void liftoff_layer_set_fb_composited(struct liftoff_layer *layer);
  */
 uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer);
 
-enum liftoff_log_importance {
+enum liftoff_log_priority {
 	LIFTOFF_SILENT,
 	LIFTOFF_ERROR,
 	LIFTOFF_DEBUG,
 };
 
-typedef void (*liftoff_log_func)(enum liftoff_log_importance importance,
-				 const char *fmt, va_list args);
+typedef void (*liftoff_log_handler)(enum liftoff_log_priority priority,
+				    const char *fmt, va_list args);
 
 /**
- * Initialize libliftoff's log infrastructure.
+ * Set libliftoff's log priority.
  *
- * Only messages with a priority higher than the provided `verbosity` will be
- * logged. If `callback` is non-NULL, libliftoff will call the function instead
- * of printing the messages to stderr.
+ * Only messages with a priority higher than the provided priority will be
+ * logged. The default priority is LIFTOFF_ERROR.
  */
-void liftoff_log_init(enum liftoff_log_importance verbosity,
-		      liftoff_log_func callback);
+void liftoff_log_set_priority(enum liftoff_log_priority priority);
+/**
+ * Set libliftoff's log handler.
+ *
+ * The default handler prints messages to stderr. NULL restores the default
+ * handler.
+ */
+void liftoff_log_set_handler(liftoff_log_handler handler);
 
 #endif

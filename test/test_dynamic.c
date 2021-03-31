@@ -308,7 +308,7 @@ static void run(const struct test_case *test) {
 int main(int argc, char *argv[]) {
 	const char *test_name;
 
-	liftoff_log_init(LIFTOFF_DEBUG, NULL);
+	liftoff_log_set_priority(LIFTOFF_DEBUG);
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s <test-name>\n", argv[0]);

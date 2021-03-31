@@ -38,8 +38,6 @@ static int test_prop_default(const char *prop_name)
 	bool ok;
 	int ret;
 
-	liftoff_log_init(LIFTOFF_DEBUG, NULL);
-
 	mock_plane_without_prop = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_OVERLAY);
 	mock_plane_with_prop = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_OVERLAY);
 
@@ -240,7 +238,7 @@ static int test_immutable_zpos(void) {
 int main(int argc, char *argv[]) {
 	const char *test_name;
 
-	liftoff_log_init(LIFTOFF_DEBUG, NULL);
+	liftoff_log_set_priority(LIFTOFF_DEBUG);
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s <test-name>\n", argv[0]);

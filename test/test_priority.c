@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 	bool ok;
 	int ret;
 
-	liftoff_log_init(LIFTOFF_SILENT, NULL);
+	liftoff_log_set_priority(LIFTOFF_SILENT);
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
 	/* Plane incompatible with all layers */

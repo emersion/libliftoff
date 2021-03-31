@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	liftoff_log_init(LIFTOFF_SILENT, NULL);
+	liftoff_log_set_priority(LIFTOFF_SILENT);
 
 	for (i = 0; i < planes_len; i++) {
 		plane_type = i == 0 ? DRM_PLANE_TYPE_PRIMARY :

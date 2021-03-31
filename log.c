@@ -3,45 +3,48 @@
 #include <string.h>
 #include "log.h"
 
-static enum liftoff_log_importance log_importance = LIFTOFF_ERROR;
+static enum liftoff_log_priority log_priority = LIFTOFF_ERROR;
 
-static void log_stderr(enum liftoff_log_importance verbosity, const char *fmt,
+static void log_stderr(enum liftoff_log_priority priority, const char *fmt,
 		       va_list args)
 {
 	vfprintf(stderr, fmt, args);
 	fprintf(stderr, "\n");
 }
 
-static liftoff_log_func log_callback = log_stderr;
+static liftoff_log_handler log_handler = log_stderr;
 
-void liftoff_log_init(enum liftoff_log_importance verbosity,
-		      liftoff_log_func callback) {
-	log_importance = verbosity;
-	if (callback) {
-		log_callback = callback;
+void liftoff_log_set_priority(enum liftoff_log_priority priority)
+{
+	log_priority = priority;
+}
+
+void liftoff_log_set_handler(liftoff_log_handler handler) {
+	if (handler) {
+		log_handler = handler;
 	} else {
-		log_callback = log_stderr;
+		log_handler = log_stderr;
 	}
 }
 
-bool log_has(enum liftoff_log_importance verbosity)
+bool log_has(enum liftoff_log_priority priority)
 {
-	return verbosity <= log_importance;
+	return priority <= log_priority;
 }
 
-void liftoff_log(enum liftoff_log_importance verbosity, const char *fmt, ...)
+void liftoff_log(enum liftoff_log_priority priority, const char *fmt, ...)
 {
-	if (!log_has(verbosity)) {
+	if (!log_has(priority)) {
 		return;
 	}
 
 	va_list args;
 	va_start(args, fmt);
-	log_callback(verbosity, fmt, args);
+	log_handler(priority, fmt, args);
 	va_end(args);
 }
 
-void liftoff_log_errno(enum liftoff_log_importance verbosity, const char *msg)
+void liftoff_log_errno(enum liftoff_log_priority priority, const char *msg)
 {
-	liftoff_log(verbosity, "%s: %s", msg, strerror(errno));
+	liftoff_log(priority, "%s: %s", msg, strerror(errno));
 }
