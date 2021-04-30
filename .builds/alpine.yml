@@ -4,12 +4,12 @@ packages:
   - clang
   - meson
   - libdrm-dev
-  # Required by codecov
   - gcovr
-  - bash
-  - findutils
+  - py3-setuptools # https://gitlab.alpinelinux.org/alpine/aports/-/merge_requests/21003
 sources:
   - https://github.com/emersion/libliftoff
+artifacts:
+  - coveragereport.tar.gz
 tasks:
   - setup: |
       cd libliftoff
@@ -27,7 +27,10 @@ tasks:
   - test-clang: |
       cd libliftoff
       ninja -C build-clang/ test
-  - upload-coverage: |
-      cd libliftoff/build-gcc
-      export CODECOV_TOKEN=ea488296-5f33-439f-a8c1-dc88a5ae9753
-      curl -s https://codecov.io/bash | sed 's/-execdir $gcov_exe/-exec $gcov_exe/' | bash -s -- -g '*/example/*' -g '*/test/*'
+  - coverage: |
+      cd libliftoff
+      echo "exclude-directories = test/" >>gcovr.cfg
+      echo "exclude-directories = example/" >>gcovr.cfg
+      ninja -C build-gcc/ coverage-html
+      cd build-gcc/meson-logs/
+      tar -czvf ~/coveragereport.tar.gz coveragereport
