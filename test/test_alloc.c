@@ -30,11 +30,17 @@ struct test_plane {
 	int type;
 };
 
+/* This structure describes a layer in a test case. The first block of fields
+ * describe the layer properties: geometry, vertical ordering, etc. The `compat`
+ * field describes which hardware planes the layer is compatible with. The
+ * `result` field describes the expected hardware plane returned by libliftoff.
+ */
 struct test_layer {
 	int x, y, width, height;
 	int zpos; /* zero means unset */
 	bool composition;
 	bool force_composited;
+
 	struct test_plane *compat[64];
 	struct test_plane *result;
 };
@@ -44,6 +50,11 @@ struct test_case {
 	struct test_layer layers[64];
 };
 
+/* This array describes the hardware we're going to perform the tests with. Our
+ * hardware has one primary plane at the bottom position, two overlay planes
+ * at the middle position (with undefined ordering between themselves), and one
+ * cursor plane at the top.
+ */
 static struct test_plane test_setup[] = {
 	{ .type = DRM_PLANE_TYPE_PRIMARY }, /* zpos = 0 */
 	{ .type = DRM_PLANE_TYPE_CURSOR }, /* zpos = 2 */
