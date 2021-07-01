@@ -56,7 +56,7 @@ uint32_t liftoff_plane_get_id(struct liftoff_plane *plane);
  * Build a layer to plane mapping and append the plane configuration to `req`.
  *
  * Callers are expected to commit `req` afterwards and can read the layer to
- * plane mapping with `liftoff_layer_get_plane_id`.
+ * plane mapping with `liftoff_layer_get_plane`.
  *
  * `flags` is the atomic commit flags the caller intends to use.
  */
