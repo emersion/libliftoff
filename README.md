@@ -35,6 +35,8 @@ int ret;
 device = liftoff_device_create(drm_fd);
 output = liftoff_output_create(device, crtc_id);
 
+liftoff_device_register_all_planes(device);
+
 layer = liftoff_layer_create(output);
 liftoff_layer_set_property(layer, "FB_ID", fb_id);
 /* Probably setup more properties and more layers */
