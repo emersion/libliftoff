@@ -22,8 +22,10 @@ Depends on libdrm. Requires universal planes and atomic.
 
 ## Usage
 
-See [`liftoff.h`][liftoff.h] and the `example/` directory. Here's the general
-idea:
+See [`liftoff.h`][liftoff.h] and the `example/` directory. See
+[`doc/compositor.md`][doc/compositor] for compositor guidelines.
+
+Here's the general idea:
 
 ```c
 struct liftoff_device *device;
@@ -67,6 +69,7 @@ contributing document][weston-contributing].
 MIT
 
 [liftoff.h]: https://github.com/emersion/libliftoff/blob/master/include/libliftoff.h
+[doc/compositor]: https://github.com/emersion/libliftoff/blob/master/doc/compositor.md
 [intro-post]: https://emersion.fr/blog/2019/xdc2019-wrap-up/#libliftoff
 [fosdem-2020]: https://fosdem.org/2020/schedule/event/kms_planes/
 [github]: https://github.com/emersion/libliftoff
