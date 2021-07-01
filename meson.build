@@ -1,7 +1,7 @@
 project(
 	'libliftoff',
 	'c',
-	version: '0.0.0',
+	version: '0.1.0',
 	license: 'MIT',
 	meson_version: '>=0.52.0',
 	default_options: [
@@ -55,7 +55,7 @@ pkgconfig.generate(
 	version: meson.project_version(),
 	filebase: meson.project_name(),
 	name: meson.project_name(),
-	description: 'Hardware composer library',
+	description: 'KMS plane library',
 )
 
 subdir('example')
