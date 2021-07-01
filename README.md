@@ -2,7 +2,7 @@
 
 [![builds.sr.ht status](https://builds.sr.ht/~emersion/libliftoff.svg)](https://builds.sr.ht/~emersion/libliftoff)
 
-Lightweight hardware composer library for libdrm.
+Lightweight KMS plane library.
 
 libliftoff eases the use of KMS planes from userspace without standing in your
 way. Users create "virtual planes" called layers, set KMS properties on them,
