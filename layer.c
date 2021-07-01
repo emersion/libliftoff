@@ -99,12 +99,9 @@ void liftoff_layer_set_fb_composited(struct liftoff_layer *layer)
 	layer->changed = true;
 }
 
-uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer)
+struct liftoff_plane *liftoff_layer_get_plane(struct liftoff_layer *layer)
 {
-	if (layer->plane == NULL) {
-		return 0;
-	}
-	return layer->plane->id;
+	return layer->plane;
 }
 
 void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)

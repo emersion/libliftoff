@@ -616,6 +616,7 @@ static void run_test(struct test_layer *test_layers)
 	struct liftoff_device *device;
 	struct liftoff_output *output;
 	struct liftoff_layer *layers[64];
+	struct liftoff_plane *plane;
 	drmModeAtomicReq *req;
 	bool ok;
 	int ret;
@@ -662,9 +663,10 @@ static void run_test(struct test_layer *test_layers)
 	drmModeAtomicFree(req);
 
 	for (i = 0; test_layers[i].width > 0; i++) {
-		plane_id = liftoff_layer_get_plane_id(layers[i]);
+		plane = liftoff_layer_get_plane(layers[i]);
 		mock_plane = NULL;
-		if (plane_id != 0) {
+		if (plane != NULL) {
+			plane_id = liftoff_plane_get_id(plane);
 			mock_plane = liftoff_mock_drm_get_plane(plane_id);
 		}
 		plane_index_got = -1;

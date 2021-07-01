@@ -92,6 +92,7 @@ static bool draw(void)
 	int ret, inc;
 	size_t i;
 	uint32_t flags;
+	struct liftoff_plane *plane;
 
 	active_layer = &layers[active_layer_idx];
 
@@ -124,8 +125,13 @@ static bool draw(void)
 	drmModeAtomicFree(req);
 
 	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
-		printf("Layer %zu got assigned to plane %u\n", i,
-		       liftoff_layer_get_plane_id(layers[i].layer));
+		plane = liftoff_layer_get_plane(layers[i].layer);
+		if (plane != NULL) {
+			printf("Layer %zu got assigned to plane %u\n", i,
+			       liftoff_plane_get_id(plane));
+		} else {
+			printf("Layer %zu has no plane assigned\n", i);
+		}
 	}
 
 	return true;

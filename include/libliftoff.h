@@ -122,9 +122,9 @@ void liftoff_layer_set_fb_composited(struct liftoff_layer *layer);
 /**
  * Retrieve the plane mapped to this layer.
  *
- * Zero is returned if no plane is mapped.
+ * NULL is returned if no plane is mapped.
  */
-uint32_t liftoff_layer_get_plane_id(struct liftoff_layer *layer);
+struct liftoff_plane *liftoff_layer_get_plane(struct liftoff_layer *layer);
 
 enum liftoff_log_priority {
 	LIFTOFF_SILENT,

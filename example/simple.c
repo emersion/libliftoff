@@ -72,6 +72,7 @@ int main(int argc, char *argv[])
 	drmModeConnector *connector;
 	struct liftoff_output *output;
 	struct liftoff_layer *layers[LAYERS_LEN];
+	struct liftoff_plane *plane;
 	drmModeAtomicReq *req;
 	int ret;
 	size_t i;
@@ -140,8 +141,13 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < sizeof(layers) / sizeof(layers[0]); i++) {
-		printf("Layer %zu got assigned to plane %u\n", i,
-		       liftoff_layer_get_plane_id(layers[i]));
+		plane = liftoff_layer_get_plane(layers[i]);
+		if (plane != NULL) {
+			printf("Layer %zu got assigned to plane %u\n", i,
+			       liftoff_plane_get_id(plane));
+		} else {
+			printf("Layer %zu has no plane assigned\n", i);
+		}
 	}
 
 	sleep(1);

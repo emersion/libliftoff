@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
 	struct liftoff_layer *composition_layer;
 	struct dumb_fb fbs[MAX_LAYERS_LEN] = {0};
 	struct liftoff_layer *layers[MAX_LAYERS_LEN];
+	struct liftoff_plane *plane;
 	drmModeAtomicReq *req;
 	int ret;
 	size_t i;
@@ -200,7 +201,7 @@ int main(int argc, char *argv[])
 
 	/* Composite layers that didn't make it into a plane */
 	for (i = 1; i < layers_len; i++) {
-		if (liftoff_layer_get_plane_id(layers[i]) == 0) {
+		if (liftoff_layer_get_plane(layers[i]) == NULL) {
 			composite(drm_fd, &composition_fb, &fbs[i],
 				  i * 100, i * 100);
 		}
@@ -212,11 +213,13 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	plane = liftoff_layer_get_plane(composition_layer);
 	printf("Composition layer got assigned to plane %u\n",
-	       liftoff_layer_get_plane_id(composition_layer));
+	       plane ? liftoff_plane_get_id(plane) : 0);
 	for (i = 0; i < layers_len; i++) {
+		plane = liftoff_layer_get_plane(layers[i]);
 		printf("Layer %zu got assigned to plane %u\n", i,
-		       liftoff_layer_get_plane_id(layers[i]));
+		       plane ? liftoff_plane_get_id(plane) : 0);
 	}
 
 	sleep(1);

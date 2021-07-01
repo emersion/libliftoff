@@ -84,7 +84,7 @@ static int test_prop_default(const char *prop_name)
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
-	assert(liftoff_layer_get_plane_id(layer) == 0);
+	assert(liftoff_layer_get_plane(layer) == NULL);
 	drmModeAtomicFree(req);
 
 	/* The layer should get assigned to the plane without the prop when
@@ -98,7 +98,7 @@ static int test_prop_default(const char *prop_name)
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
-	assert(liftoff_layer_get_plane_id(layer) != 0);
+	assert(liftoff_layer_get_plane(layer) != NULL);
 	drmModeAtomicFree(req);
 
 	/* The layer should get assigned to the plane with the prop when using
@@ -114,7 +114,7 @@ static int test_prop_default(const char *prop_name)
 	assert(ok);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
-	assert(liftoff_layer_get_plane_id(layer) != 0);
+	assert(liftoff_layer_get_plane(layer) != NULL);
 	drmModeAtomicFree(req);
 
 	liftoff_device_destroy(device);

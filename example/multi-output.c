@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
 	drmModeCrtc *crtcs[MAX_OUTPUTS], *crtc;
 	struct liftoff_output *outputs[MAX_OUTPUTS], *output;
 	struct liftoff_layer *layers[MAX_OUTPUTS * LAYERS_PER_OUTPUT];
+	struct liftoff_plane *plane;
 	size_t outputs_len, layers_len;
 	drmModeAtomicReq *req;
 	int ret;
@@ -168,8 +169,13 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < layers_len; i++) {
-		printf("Layer %zu got assigned to plane %u\n", i,
-		       liftoff_layer_get_plane_id(layers[i]));
+		plane = liftoff_layer_get_plane(layers[i]);
+		if (plane != NULL) {
+			printf("Layer %zu got assigned to plane %u\n", i,
+			       liftoff_plane_get_id(plane));
+		} else {
+			printf("Layer %zu has no plane assigned\n", i);
+		}
 	}
 
 	sleep(1);
