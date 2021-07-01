@@ -48,6 +48,11 @@ struct liftoff_plane *liftoff_plane_create(struct liftoff_device *device,
 void liftoff_plane_destroy(struct liftoff_plane *plane);
 
 /**
+ * Obtain the object ID of the plane.
+ */
+uint32_t liftoff_plane_get_id(struct liftoff_plane *plane);
+
+/**
  * Build a layer to plane mapping and append the plane configuration to `req`.
  *
  * Callers are expected to commit `req` afterwards and can read the layer to
