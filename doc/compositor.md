@@ -84,7 +84,7 @@ used to tell libliftoff that composition will happen on this special layer.
 If all regular layers can be put into a plane, the composition layer won't be
 used. Otherwise, the compositor needs to perform the composition prior to
 performing a page-flip. Each layer that didn't make it into a hardware plane
-(ie. `liftoff_layer_get_plane` returns NULL) needs to be composited.
+(ie. `liftoff_layer_needs_composition` returns true) needs to be composited.
 
 ## Disabling layers
 

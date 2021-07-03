@@ -104,6 +104,14 @@ struct liftoff_plane *liftoff_layer_get_plane(struct liftoff_layer *layer)
 	return layer->plane;
 }
 
+bool liftoff_layer_needs_composition(struct liftoff_layer *layer)
+{
+	if (!layer_is_visible(layer)) {
+		return false;
+	}
+	return layer->plane == NULL;
+}
+
 void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)
 {
 	struct liftoff_layer_property *x_prop, *y_prop, *w_prop, *h_prop;

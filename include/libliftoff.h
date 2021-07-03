@@ -55,8 +55,8 @@ uint32_t liftoff_plane_get_id(struct liftoff_plane *plane);
 /**
  * Build a layer to plane mapping and append the plane configuration to `req`.
  *
- * Callers are expected to commit `req` afterwards and can read the layer to
- * plane mapping with `liftoff_layer_get_plane`.
+ * Callers are expected to commit `req` afterwards and can figure out which
+ * layers need composition via `liftoff_layer_needs_composition`.
  *
  * `flags` is the atomic commit flags the caller intends to use.
  */
@@ -85,6 +85,14 @@ void liftoff_output_destroy(struct liftoff_output *output);
  */
 void liftoff_output_set_composition_layer(struct liftoff_output *output,
 					  struct liftoff_layer *layer);
+/**
+ * Check whether this output needs composition.
+ *
+ * An output doesn't need composition if all visible layers could be mapped to a
+ * plane. In other words, if an output needs composition, at least one layer
+ * will return true when `liftoff_layer_needs_composition` is called.
+ */
+bool liftoff_output_needs_composition(struct liftoff_output *output);
 
 /**
  * Create a new layer on an output.
@@ -119,6 +127,13 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
  * needs to be displayed (e.g. the buffer cannot be imported in KMS).
  */
 void liftoff_layer_set_fb_composited(struct liftoff_layer *layer);
+/**
+ * Check whether this layer needs composition.
+ *
+ * A layer needs composition if it's visible and if it couldn't be mapped to a
+ * plane.
+ */
+bool liftoff_layer_needs_composition(struct liftoff_layer *layer);
 /**
  * Retrieve the plane mapped to this layer.
  *

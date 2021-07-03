@@ -159,6 +159,7 @@ static int test_ignore_alpha(void)
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane) == NULL);
+	assert(!liftoff_layer_needs_composition(layer));
 	drmModeAtomicFree(req);
 
 	liftoff_device_destroy(device);

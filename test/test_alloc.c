@@ -605,6 +605,19 @@ static struct test_case tests[] = {
 	},
 };
 
+static bool test_needs_composition(struct test_layer *test_layers)
+{
+	size_t i;
+
+	for (i = 0; test_layers[i].width > 0; i++) {
+		if (test_layers[i].result == NULL) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 static void run_test(struct test_layer *test_layers)
 {
 	size_t i, j;
@@ -693,6 +706,9 @@ static void run_test(struct test_layer *test_layers)
 		}
 	}
 	assert(ok);
+
+	assert(test_needs_composition(test_layers) ==
+	       liftoff_output_needs_composition(output));
 
 	liftoff_output_destroy(output);
 	liftoff_device_destroy(device);
