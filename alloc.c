@@ -636,7 +636,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	struct liftoff_layer *layer;
 	struct alloc_result result;
 	struct alloc_step step;
-	size_t i;
+	size_t i, j;
 	bool compatible;
 
 	device = output->device;
@@ -649,6 +649,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	}
 	log_no_reuse(output);
 
+	output_log_planes(output);
 	output_log_layers(output);
 
 	/* Unset all existing plane and layer mappings. */
@@ -663,8 +664,6 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	   to hit bandwidth limits because too many planes are enabled. */
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer == NULL) {
-			liftoff_log(LIFTOFF_DEBUG,
-				    "Disabling plane %"PRIu32, plane->id);
 			if (!plane_apply(plane, NULL, req, &compatible)) {
 				return false;
 			}
@@ -707,7 +706,8 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 		    "score=%d:", (void *)output, result.best_score);
 
 	/* Apply the best allocation */
-	i = 0;
+	liftoff_log(LIFTOFF_DEBUG, "Final assignment of layers to planes:");
+	i = j = 0;
 	liftoff_list_for_each(plane, &device->planes, link) {
 		layer = result.best[i];
 		i++;
@@ -715,14 +715,18 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 			continue;
 		}
 
-		liftoff_log(LIFTOFF_DEBUG, "  Layer %p -> plane %"PRIu32,
-			    (void *)layer, plane->id);
+		j++;
+		liftoff_log(LIFTOFF_DEBUG, "  [%zu] Layer %p -> plane %"PRIu32
+					" (%s)", j, (void *)layer, plane->id,
+					plane->type == DRM_PLANE_TYPE_PRIMARY ? "primary" :
+					DRM_PLANE_TYPE_OVERLAY ? "overlay" : "cursor");
 
 		assert(plane->layer == NULL);
 		assert(layer->plane == NULL);
 		plane->layer = layer;
 		layer->plane = plane;
 	}
+	liftoff_log(LIFTOFF_DEBUG, "%s", i > 0 ? " " : "  No planes assigned!");
 
 	if (!apply_current(device, req)) {
 		return false;
