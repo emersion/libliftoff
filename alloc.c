@@ -344,15 +344,14 @@ bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 	return true;
 }
 
-bool output_choose_layers(struct liftoff_output *output,
-			  struct alloc_result *result, struct alloc_step *step)
+int output_choose_layers(struct liftoff_output *output,
+			 struct alloc_result *result, struct alloc_step *step)
 {
 	struct liftoff_device *device;
 	struct liftoff_plane *plane;
 	struct liftoff_layer *layer;
-	int cursor;
+	int cursor, ret;
 	size_t remaining_planes;
-	bool compatible;
 	struct alloc_step next_step;
 
 	device = output->device;
@@ -368,7 +367,7 @@ bool output_choose_layers(struct liftoff_output *output,
 			memcpy(result->best, step->alloc,
 			       result->planes_len * sizeof(struct liftoff_layer *));
 		}
-		return true;
+		return 0;
 	}
 
 	plane = liftoff_container_of(step->plane_link, plane, link);
@@ -379,7 +378,7 @@ bool output_choose_layers(struct liftoff_output *output,
 		 * find a better allocation. Give up. */
 		/* TODO: change remaining_planes to only count those whose
 		 * possible CRTC match and which aren't allocated */
-		return true;
+		return 0;
 	}
 
 	cursor = drmModeAtomicGetCursor(result->req);
@@ -410,30 +409,30 @@ bool output_choose_layers(struct liftoff_output *output,
 		liftoff_log(LIFTOFF_DEBUG, "  Layer %p -> plane %"PRIu32": "
 			    "applying properties...",
 			    (void *)layer, plane->id);
-		if (!plane_apply(plane, layer, result->req, &compatible)) {
-			return false;
-		}
-		if (!compatible) {
+		ret = plane_apply(plane, layer, result->req);
+		if (ret == -EINVAL) {
 			liftoff_log(LIFTOFF_DEBUG,
 				    "  Layer %p -> plane %"PRIu32": "
 				    "incompatible properties",
 				    (void *)layer, plane->id);
 			continue;
+		} else if (ret != 0) {
+			return ret;
 		}
 
-		if (!device_test_commit(device, result->req, result->flags,
-					&compatible)) {
-			return false;
-		}
-		if (compatible) {
+		ret = device_test_commit(device, result->req, result->flags);
+		if (ret == 0) {
 			liftoff_log(LIFTOFF_DEBUG,
 				    "  Layer %p -> plane %"PRIu32": success",
 				    (void *)layer, plane->id);
 			/* Continue with the next plane */
 			plane_step_init_next(&next_step, step, layer);
-			if (!output_choose_layers(output, result, &next_step)) {
-				return false;
+			ret = output_choose_layers(output, result, &next_step);
+			if (ret != 0) {
+				return ret;
 			}
+		} else if (ret != -EINVAL && ret != -ERANGE) {
+			return ret;
 		}
 
 		drmModeAtomicSetCursor(result->req, cursor);
@@ -442,32 +441,32 @@ bool output_choose_layers(struct liftoff_output *output,
 skip:
 	/* Try not to use the current plane */
 	plane_step_init_next(&next_step, step, NULL);
-	if (!output_choose_layers(output, result, &next_step)) {
-		return false;
+	ret = output_choose_layers(output, result, &next_step);
+	if (ret != 0) {
+		return ret;
 	}
 	drmModeAtomicSetCursor(result->req, cursor);
 
-	return true;
+	return 0;
 }
 
-static bool apply_current(struct liftoff_device *device,
-			  drmModeAtomicReq *req)
+static int apply_current(struct liftoff_device *device, drmModeAtomicReq *req)
 {
 	struct liftoff_plane *plane;
-	int cursor;
-	bool compatible;
+	int cursor, ret;
 
 	cursor = drmModeAtomicGetCursor(req);
 
 	liftoff_list_for_each(plane, &device->planes, link) {
-		if (!plane_apply(plane, plane->layer, req, &compatible)) {
+		ret = plane_apply(plane, plane->layer, req);
+		assert(ret != -EINVAL);
+		if (ret != 0) {
 			drmModeAtomicSetCursor(req, cursor);
-			return false;
+			return ret;
 		}
-		assert(compatible);
 	}
 
-	return true;
+	return 0;
 }
 
 static bool layer_needs_realloc(struct liftoff_layer *layer)
@@ -525,37 +524,37 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 	return false;
 }
 
-static bool reuse_previous_alloc(struct liftoff_output *output,
-				 drmModeAtomicReq *req, uint32_t flags)
+static int reuse_previous_alloc(struct liftoff_output *output,
+				drmModeAtomicReq *req, uint32_t flags)
 {
 	struct liftoff_device *device;
 	struct liftoff_layer *layer;
-	int cursor;
-	bool compatible;
+	int cursor, ret;
 
 	device = output->device;
 
 	if (output->layers_changed) {
-		return false;
+		return -EINVAL;
 	}
 
 	liftoff_list_for_each(layer, &output->layers, link) {
 		if (layer_needs_realloc(layer)) {
-			return false;
+			return -EINVAL;
 		}
 	}
 
 	cursor = drmModeAtomicGetCursor(req);
 
-	if (!apply_current(device, req)) {
-		return false;
-	}
-	if (!device_test_commit(device, req, flags, &compatible) || !compatible) {
-		drmModeAtomicSetCursor(req, cursor);
-		return false;
+	ret = apply_current(device, req);
+	if (ret != 0) {
+		return ret;
 	}
 
-	return true;
+	ret = device_test_commit(device, req, flags);
+	if (ret != 0) {
+		drmModeAtomicSetCursor(req, cursor);
+	}
+	return ret;
 }
 
 static void mark_layers_clean(struct liftoff_output *output)
@@ -628,8 +627,8 @@ static size_t non_composition_layers_length(struct liftoff_output *output)
 	return n;
 }
 
-bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
-			  uint32_t flags)
+int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
+			 uint32_t flags)
 {
 	struct liftoff_device *device;
 	struct liftoff_plane *plane;
@@ -637,15 +636,16 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	struct alloc_result result;
 	struct alloc_step step;
 	size_t i;
-	bool compatible;
+	int ret;
 
 	device = output->device;
 
 	update_layers_priority(device);
 
-	if (reuse_previous_alloc(output, req, flags)) {
+	ret = reuse_previous_alloc(output, req, flags);
+	if (ret == 0) {
 		log_reuse(output);
-		return true;
+		return 0;
 	}
 	log_no_reuse(output);
 
@@ -665,10 +665,11 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 		if (plane->layer == NULL) {
 			liftoff_log(LIFTOFF_DEBUG,
 				    "Disabling plane %"PRIu32, plane->id);
-			if (!plane_apply(plane, NULL, req, &compatible)) {
-				return false;
+			ret = plane_apply(plane, NULL, req);
+			assert(ret != -EINVAL);
+			if (ret != 0) {
+				return ret;
 			}
-			assert(compatible);
 		}
 	}
 
@@ -680,7 +681,7 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	result.best = malloc(result.planes_len * sizeof(*result.best));
 	if (step.alloc == NULL || result.best == NULL) {
 		liftoff_log_errno(LIFTOFF_ERROR, "malloc");
-		return false;
+		return -ENOMEM;
 	}
 
 	/* For each plane, try to find a layer. Don't do it the other
@@ -698,8 +699,9 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	step.score = 0;
 	step.last_layer_zpos = INT_MAX;
 	step.composited = false;
-	if (!output_choose_layers(output, &result, &step)) {
-		return false;
+	ret = output_choose_layers(output, &result, &step);
+	if (ret != 0) {
+		return ret;
 	}
 
 	liftoff_log(LIFTOFF_DEBUG,
@@ -724,8 +726,9 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 		layer->plane = plane;
 	}
 
-	if (!apply_current(device, req)) {
-		return false;
+	ret = apply_current(device, req);
+	if (ret != 0) {
+		return ret;
 	}
 
 	free(step.alloc);
@@ -733,5 +736,5 @@ bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 
 	mark_layers_clean(output);
 
-	return true;
+	return 0;
 }

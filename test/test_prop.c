@@ -35,7 +35,6 @@ static int test_prop_default(const char *prop_name)
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	mock_plane_without_prop = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_OVERLAY);
@@ -80,8 +79,8 @@ static int test_prop_default(const char *prop_name)
 
 	liftoff_layer_set_property(layer, prop.name, require_prop_value);
 
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_layer_get_plane(layer) == NULL);
@@ -94,8 +93,8 @@ static int test_prop_default(const char *prop_name)
 
 	liftoff_layer_set_property(layer, prop.name, default_value);
 
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_layer_get_plane(layer) != NULL);
@@ -110,8 +109,8 @@ static int test_prop_default(const char *prop_name)
 
 	liftoff_layer_set_property(layer, prop.name, require_prop_value);
 
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_layer_get_plane(layer) != NULL);
@@ -133,7 +132,6 @@ static int test_ignore_alpha(void)
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
@@ -154,8 +152,8 @@ static int test_ignore_alpha(void)
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane) == NULL);
@@ -176,7 +174,6 @@ static int test_immutable_zpos(void) {
 	struct liftoff_output *output;
 	struct liftoff_layer *layer1, *layer2;
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	mock_plane1 = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_OVERLAY);
@@ -214,8 +211,8 @@ static int test_immutable_zpos(void) {
 	liftoff_layer_set_property(layer2, "zpos", 43);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane1) == layer1);
@@ -227,8 +224,8 @@ static int test_immutable_zpos(void) {
 	liftoff_layer_set_property(layer2, "zpos", 42);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane1) == layer2);

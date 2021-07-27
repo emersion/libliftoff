@@ -86,8 +86,8 @@ bool liftoff_device_register_all_planes(struct liftoff_device *device)
 	return true;
 }
 
-bool device_test_commit(struct liftoff_device *device,
-			drmModeAtomicReq *req, uint32_t flags, bool *compatible)
+int device_test_commit(struct liftoff_device *device,
+		       drmModeAtomicReq *req, uint32_t flags)
 {
 	int ret;
 
@@ -96,16 +96,12 @@ bool device_test_commit(struct liftoff_device *device,
 		ret = drmModeAtomicCommit(device->drm_fd, req,
 					  DRM_MODE_ATOMIC_TEST_ONLY | flags,
 					  NULL);
-	} while (-ret == EINTR || -ret == EAGAIN);
-	if (ret == 0) {
-		*compatible = true;
-	} else if (-ret == EINVAL || -ret == ERANGE) {
-		*compatible = false;
-	} else {
-		liftoff_log_errno(LIFTOFF_ERROR, "drmModeAtomicCommit");
-		*compatible = false;
-		return false;
+	} while (ret == -EINTR || ret == -EAGAIN);
+
+	if (ret != 0 && ret != -EINVAL && ret != -ERANGE) {
+		liftoff_log(LIFTOFF_ERROR, "drmModeAtomicCommit: %s",
+			    strerror(-ret));
 	}
 
-	return true;
+	return ret;
 }

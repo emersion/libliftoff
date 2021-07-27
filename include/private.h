@@ -81,8 +81,8 @@ struct liftoff_rect {
 	int width, height;
 };
 
-bool device_test_commit(struct liftoff_device *device,
-			drmModeAtomicReq *req, uint32_t flags, bool *compatible);
+int device_test_commit(struct liftoff_device *device,
+		       drmModeAtomicReq *req, uint32_t flags);
 
 struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 						  const char *name);
@@ -95,8 +95,8 @@ bool layer_is_visible(struct liftoff_layer *layer);
 
 struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
 						  const char *name);
-bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
-		 drmModeAtomicReq *req, bool *compatible);
+int plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
+		drmModeAtomicReq *req);
 
 void output_log_layers(struct liftoff_output *output);
 

@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 	struct liftoff_output *output;
 	struct liftoff_layer *layers[MAX_LAYERS];
 	drmModeAtomicReq *req;
-	bool ok;
+	int ret;
 
 	planes_len = 5;
 	layers_len = 10;
@@ -101,8 +101,8 @@ int main(int argc, char *argv[])
 	clock_gettime(CLOCK_MONOTONIC, &start);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	drmModeAtomicFree(req);
 
 	clock_gettime(CLOCK_MONOTONIC, &end);

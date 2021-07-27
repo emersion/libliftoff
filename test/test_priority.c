@@ -37,7 +37,6 @@ int main(int argc, char *argv[]) {
 	struct liftoff_layer *layers[2], *layer;
 	uint32_t fbs[2];
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	liftoff_log_set_priority(LIFTOFF_SILENT);
@@ -75,8 +74,8 @@ int main(int argc, char *argv[]) {
 
 			liftoff_layer_set_property(layer, "FB_ID", fbs[j % 2]);
 
-			ok = liftoff_output_apply(output, req, 0);
-			assert(ok);
+			ret = liftoff_output_apply(output, req, 0);
+			assert(ret == 0);
 			ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 			assert(ret == 0);
 		}

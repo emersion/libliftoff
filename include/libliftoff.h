@@ -59,9 +59,11 @@ uint32_t liftoff_plane_get_id(struct liftoff_plane *plane);
  * plane mapping with `liftoff_layer_get_plane`.
  *
  * `flags` is the atomic commit flags the caller intends to use.
+ *
+ * Zero is returned on success, negative errno on error.
  */
-bool liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
-			  uint32_t flags);
+int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
+			 uint32_t flags);
 
 /**
  * Make the device manage a CRTC's planes.

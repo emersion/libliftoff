@@ -41,14 +41,13 @@ static struct liftoff_layer *add_layer(struct liftoff_output *output,
 
 static void first_commit(struct context *ctx) {
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	assert(ctx->commit_count == 0);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(ctx->output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(ctx->output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(ctx->drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	drmModeAtomicFree(req);
@@ -64,12 +63,11 @@ static void first_commit(struct context *ctx) {
 
 static void second_commit(struct context *ctx, bool want_reuse_prev_alloc) {
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(ctx->output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(ctx->output, req, 0);
+	assert(ret == 0);
 	if (want_reuse_prev_alloc) {
 		/* The library should perform only one TEST_ONLY commit with the
 		 * previous plane allocation. */

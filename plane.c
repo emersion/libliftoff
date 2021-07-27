@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,23 +166,24 @@ struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
 	return NULL;
 }
 
-static bool plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
-			   struct liftoff_plane_property *prop, uint64_t value)
+static int plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
+			  struct liftoff_plane_property *prop, uint64_t value)
 {
 	int ret;
 
 	ret = drmModeAtomicAddProperty(req, plane->id, prop->id, value);
 	if (ret < 0) {
-		liftoff_log_errno(LIFTOFF_ERROR, "drmModeAtomicAddProperty");
-		return false;
+		liftoff_log(LIFTOFF_ERROR, "drmModeAtomicAddProperty: %s",
+			    strerror(-ret));
+		return ret;
 	}
 
-	return true;
+	return 0;
 }
 
-static bool set_plane_prop_str(struct liftoff_plane *plane,
-			       drmModeAtomicReq *req, const char *name,
-			       uint64_t value)
+static int set_plane_prop_str(struct liftoff_plane *plane,
+			      drmModeAtomicReq *req, const char *name,
+			      uint64_t value)
 {
 	struct liftoff_plane_property *prop;
 
@@ -190,30 +192,33 @@ static bool set_plane_prop_str(struct liftoff_plane *plane,
 		liftoff_log(LIFTOFF_DEBUG,
 			    "plane %"PRIu32" is missing the %s property",
 			    plane->id, name);
-		return false;
+		return -EINVAL;
 	}
 
 	return plane_set_prop(plane, req, prop, value);
 }
 
-bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
-		 drmModeAtomicReq *req, bool *compatible)
+int plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
+		drmModeAtomicReq *req)
 {
-	int cursor;
+	int cursor, ret;
 	size_t i;
 	struct liftoff_layer_property *layer_prop;
 	struct liftoff_plane_property *plane_prop;
 
-	*compatible = true;
 	cursor = drmModeAtomicGetCursor(req);
 
 	if (layer == NULL) {
-		return set_plane_prop_str(plane, req, "FB_ID", 0) &&
-		       set_plane_prop_str(plane, req, "CRTC_ID", 0);
+		ret = set_plane_prop_str(plane, req, "FB_ID", 0);
+		if (ret != 0) {
+			return ret;
+		}
+		return set_plane_prop_str(plane, req, "CRTC_ID", 0);
 	}
 
-	if (!set_plane_prop_str(plane, req, "CRTC_ID", layer->output->crtc_id)) {
-		return false;
+	ret = set_plane_prop_str(plane, req, "CRTC_ID", layer->output->crtc_id);
+	if (ret != 0) {
+		return ret;
 	}
 
 	for (i = 0; i < layer->props_len; i++) {
@@ -234,16 +239,16 @@ bool plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 			    layer_prop->value == DRM_MODE_ROTATE_0) {
 				continue; /* Layer isn't rotated */
 			}
-			*compatible = false;
 			drmModeAtomicSetCursor(req, cursor);
-			return true;
+			return -EINVAL;
 		}
 
-		if (!plane_set_prop(plane, req, plane_prop, layer_prop->value)) {
+		ret = plane_set_prop(plane, req, plane_prop, layer_prop->value);
+		if (ret != 0) {
 			drmModeAtomicSetCursor(req, cursor);
-			return false;
+			return ret;
 		}
 	}
 
-	return true;
+	return 0;
 }

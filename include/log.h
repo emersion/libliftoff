@@ -1,6 +1,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <stdbool.h>
+
 #include <libliftoff.h>
 
 #ifdef __GNUC__

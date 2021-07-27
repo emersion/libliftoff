@@ -194,7 +194,8 @@ int main(int argc, char *argv[])
 
 	flags = DRM_MODE_ATOMIC_NONBLOCK;
 	req = drmModeAtomicAlloc();
-	if (!liftoff_output_apply(output, req, flags)) {
+	ret = liftoff_output_apply(output, req, flags);
+	if (ret != 0) {
 		perror("liftoff_output_apply");
 		return 1;
 	}

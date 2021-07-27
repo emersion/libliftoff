@@ -656,12 +656,13 @@ static void run_test(struct test_layer *test_layers)
 	}
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	drmModeAtomicFree(req);
 
+	ok = true;
 	for (i = 0; test_layers[i].width > 0; i++) {
 		plane = liftoff_layer_get_plane(layers[i]);
 		mock_plane = NULL;
@@ -707,7 +708,6 @@ static void test_basic(void)
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
@@ -724,8 +724,8 @@ static void test_basic(void)
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane) == layer);
@@ -745,7 +745,6 @@ static void test_no_fb_fail(bool zero_fb_id)
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
@@ -765,8 +764,8 @@ static void test_no_fb_fail(bool zero_fb_id)
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane) == NULL);
@@ -787,7 +786,6 @@ static void test_composition_zero_fb(void)
 	struct liftoff_layer *composition_layer, *layer_with_fb,
 			     *layer_without_fb;
 	drmModeAtomicReq *req;
-	bool ok;
 	int ret;
 
 	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
@@ -811,8 +809,8 @@ static void test_composition_zero_fb(void)
 	liftoff_mock_plane_add_compatible_layer(mock_plane, layer_with_fb);
 
 	req = drmModeAtomicAlloc();
-	ok = liftoff_output_apply(output, req, 0);
-	assert(ok);
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
 	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
 	assert(ret == 0);
 	assert(liftoff_mock_plane_get_layer(mock_plane) == layer_with_fb);
