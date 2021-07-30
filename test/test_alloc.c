@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <libliftoff.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include "libdrm_mock.h"

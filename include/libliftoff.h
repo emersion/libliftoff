@@ -2,7 +2,6 @@
 #define LIFTOFF_H
 
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <xf86drmMode.h>
