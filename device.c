@@ -65,7 +65,7 @@ void liftoff_device_destroy(struct liftoff_device *device)
 	free(device);
 }
 
-bool liftoff_device_register_all_planes(struct liftoff_device *device)
+int liftoff_device_register_all_planes(struct liftoff_device *device)
 {
 	drmModePlaneRes *drm_plane_res;
 	uint32_t i;
@@ -73,17 +73,17 @@ bool liftoff_device_register_all_planes(struct liftoff_device *device)
 	drm_plane_res = drmModeGetPlaneResources(device->drm_fd);
 	if (drm_plane_res == NULL) {
 		liftoff_log_errno(LIFTOFF_ERROR, "drmModeGetPlaneResources");
-		return false;
+		return -errno;
 	}
 
 	for (i = 0; i < drm_plane_res->count_planes; i++) {
 		if (liftoff_plane_create(device, drm_plane_res->planes[i]) == NULL) {
-			return false;
+			return -errno;
 		}
 	}
 	drmModeFreePlaneResources(drm_plane_res);
 
-	return true;
+	return 0;
 }
 
 int device_test_commit(struct liftoff_device *device,

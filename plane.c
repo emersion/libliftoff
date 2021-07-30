@@ -47,6 +47,7 @@ struct liftoff_plane *liftoff_plane_create(struct liftoff_device *device,
 		if (plane->id == id) {
 			liftoff_log(LIFTOFF_ERROR, "tried to register plane "
 				    "%"PRIu32" twice\n", id);
+			errno = EEXIST;
 			return NULL;
 		}
 	}
@@ -109,6 +110,7 @@ struct liftoff_plane *liftoff_plane_create(struct liftoff_device *device,
 			    "plane %"PRIu32" is missing the 'type' property",
 			    plane->id);
 		free(plane);
+		errno = EINVAL;
 		return NULL;
 	} else if (!has_zpos) {
 		plane->zpos = guess_plane_zpos_from_type(device, plane->id,

@@ -46,5 +46,8 @@ void liftoff_log(enum liftoff_log_priority priority, const char *fmt, ...)
 
 void liftoff_log_errno(enum liftoff_log_priority priority, const char *msg)
 {
+	// Ensure errno is still set to its original value when we return
+	int prev_errno = errno;
 	liftoff_log(priority, "%s: %s", msg, strerror(errno));
+	errno = prev_errno;
 }

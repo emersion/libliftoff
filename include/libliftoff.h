@@ -31,8 +31,10 @@ void liftoff_device_destroy(struct liftoff_device *device);
  *
  * Users should call this function if they don't manually set any plane property
  * and instead use libliftoff layers.
+ *
+ * Zero is returned on success, negative errno on error.
  */
-bool liftoff_device_register_all_planes(struct liftoff_device *device);
+int liftoff_device_register_all_planes(struct liftoff_device *device);
 
 /**
  * Register a hardware plane to be managed by the libliftoff device.
