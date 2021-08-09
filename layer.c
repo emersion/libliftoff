@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include "private.h"
@@ -48,17 +49,16 @@ struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 	return NULL;
 }
 
-void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
-				uint64_t value)
+int liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
+			       uint64_t value)
 {
 	struct liftoff_layer_property *props;
 	struct liftoff_layer_property *prop;
 
-	/* TODO: better error handling */
 	if (strcmp(name, "CRTC_ID") == 0) {
 		liftoff_log(LIFTOFF_ERROR,
 			    "refusing to set a layer's CRTC_ID");
-		return;
+		return -EINVAL;
 	}
 
 	prop = layer_get_property(layer, name);
@@ -67,7 +67,7 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 				* sizeof(struct liftoff_layer_property));
 		if (props == NULL) {
 			liftoff_log_errno(LIFTOFF_ERROR, "realloc");
-			return;
+			return -ENOMEM;
 		}
 		layer->props = props;
 		layer->props_len++;
@@ -85,6 +85,8 @@ void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 		layer->force_composition = false;
 		layer->changed = true;
 	}
+
+	return 0;
 }
 
 void liftoff_layer_set_fb_composited(struct liftoff_layer *layer)

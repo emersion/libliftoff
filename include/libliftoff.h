@@ -109,9 +109,11 @@ void liftoff_layer_destroy(struct liftoff_layer *layer);
  * the property, the layer won't be mapped to any plane.
  *
  * Setting a zero FB_ID disables the layer.
+ *
+ * Zero is returned on success, negative errno on error.
  */
-void liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
-				uint64_t value);
+int liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
+			       uint64_t value);
 /**
  * Force composition on this layer.
  *
