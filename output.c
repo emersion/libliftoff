@@ -68,6 +68,10 @@ bool liftoff_output_needs_composition(struct liftoff_output *output)
 	return false;
 }
 
+double fp16_to_double(uint64_t val) {
+	return (double)(val >> 16) + (double)(val & 0xFFFF) / 0xFFFF;
+}
+
 void output_log_layers(struct liftoff_output *output) {
 	struct liftoff_layer *layer;
 	size_t i;
@@ -98,12 +102,14 @@ void output_log_layers(struct liftoff_output *output) {
 
 			if (strcmp(name, "CRTC_X") == 0 ||
 			    strcmp(name, "CRTC_Y") == 0) {
-				liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIi32,
+				liftoff_log(LIFTOFF_DEBUG, "    %s = %+"PRIi32,
 					    name, (int32_t)value);
-			} else if (strcmp(name, "SRC_W") == 0 ||
+			} else if (strcmp(name, "SRC_X") == 0 ||
+				   strcmp(name, "SRC_Y") == 0 ||
+				   strcmp(name, "SRC_W") == 0 ||
 				   strcmp(name, "SRC_H") == 0) {
-				liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIu64,
-					    name, value >> 16);
+				liftoff_log(LIFTOFF_DEBUG, "    %s = %f",
+					    name, fp16_to_double(value));
 			} else {
 				liftoff_log(LIFTOFF_DEBUG, "    %s = %"PRIu64,
 					    name, value);
