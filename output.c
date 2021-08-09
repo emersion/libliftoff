@@ -68,7 +68,7 @@ bool liftoff_output_needs_composition(struct liftoff_output *output)
 	return false;
 }
 
-double fp16_to_double(uint64_t val) {
+static double fp16_to_double(uint64_t val) {
 	return (double)(val >> 16) + (double)(val & 0xFFFF) / 0xFFFF;
 }
 
