@@ -705,8 +705,8 @@ int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	}
 
 	liftoff_log(LIFTOFF_DEBUG,
-		    "Found plane allocation for output %p with "
-		    "score=%d:", (void *)output, result.best_score);
+		    "Found plane allocation for output %p with score=%d:",
+		    (void *)output, result.best_score);
 
 	/* Apply the best allocation */
 	i = 0;
@@ -724,6 +724,9 @@ int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 		assert(layer->plane == NULL);
 		plane->layer = layer;
 		layer->plane = plane;
+	}
+	if (i == 0) {
+		liftoff_log(LIFTOFF_DEBUG, "  (No layer has a plane)");
 	}
 
 	ret = apply_current(device, req);
