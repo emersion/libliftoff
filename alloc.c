@@ -635,7 +635,7 @@ int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	struct liftoff_layer *layer;
 	struct alloc_result result;
 	struct alloc_step step;
-	size_t i;
+	size_t i, candidate_planes;
 	int ret;
 
 	device = output->device;
@@ -659,10 +659,13 @@ int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 		}
 	}
 
-	/* Disable all planes. Do it before building mappings to make sure not
-	   to hit bandwidth limits because too many planes are enabled. */
+	/* Disable all planes we might use. Do it before building mappings to
+	 * make sure not to hit bandwidth limits because too many planes are
+	 * enabled. */
+	candidate_planes = 0;
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->layer == NULL) {
+			candidate_planes++;
 			liftoff_log(LIFTOFF_DEBUG,
 				    "Disabling plane %"PRIu32, plane->id);
 			ret = plane_apply(plane, NULL, req);
@@ -705,8 +708,8 @@ int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	}
 
 	liftoff_log(LIFTOFF_DEBUG,
-		    "Found plane allocation for output %p with score=%d:",
-		    (void *)output, result.best_score);
+		    "Found plane allocation for output %p (score: %d, candidate planes: %zu):",
+		    (void *)output, result.best_score, candidate_planes);
 
 	/* Apply the best allocation */
 	i = 0;
