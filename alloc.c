@@ -361,7 +361,7 @@ int output_choose_layers(struct liftoff_output *output,
 	struct liftoff_layer *layer;
 	int cursor, ret;
 	size_t remaining_planes;
-	struct alloc_step next_step;
+	struct alloc_step next_step = {0};
 
 	device = output->device;
 
@@ -644,8 +644,8 @@ int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	struct liftoff_device *device;
 	struct liftoff_plane *plane;
 	struct liftoff_layer *layer;
-	struct alloc_result result;
-	struct alloc_step step;
+	struct alloc_result result = {0};
+	struct alloc_step step = {0};
 	size_t i, candidate_planes;
 	int ret;
 
