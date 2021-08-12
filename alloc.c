@@ -334,8 +334,14 @@ check_layer_plane_compatible(struct alloc_step *step,
 }
 
 static bool
-check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
+check_alloc_valid(struct liftoff_output *output, struct alloc_result *result,
+		  struct alloc_step *step)
 {
+	ssize_t i, j;
+	struct liftoff_plane *primary_plane, *other_plane;
+	struct liftoff_layer *primary_layer, *other_layer;
+	struct liftoff_layer_property *primary_zpos_prop, *other_zpos_prop;
+
 	/* If composition isn't used, we need to have allocated all
 	 * layers. */
 	/* TODO: find a way to fail earlier, e.g. when the number of
@@ -358,6 +364,54 @@ check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 		return false;
 	}
 
+	/* Primary planes are handled up front, but we can't */
+	i = -1;
+	liftoff_list_for_each(primary_plane, &output->device->planes, link) {
+		i++;
+		if (i >= (ssize_t)step->plane_idx) {
+			continue;
+		}
+		if (primary_plane->type != DRM_PLANE_TYPE_PRIMARY) {
+			continue;
+		}
+
+		primary_layer = step->alloc[i];
+		if (!primary_layer) {
+			continue;
+		}
+
+		primary_zpos_prop = layer_get_property(primary_layer, "zpos");
+		if (!primary_zpos_prop) {
+			continue;
+		}
+
+		j = -1;
+		liftoff_list_for_each(other_plane, &output->device->planes, link) {
+			j++;
+			if (j >= (ssize_t)step->plane_idx) {
+				break;
+			}
+			if (other_plane->type == DRM_PLANE_TYPE_PRIMARY) {
+				continue;
+			}
+
+			other_layer = step->alloc[j];
+			if (other_layer == NULL) {
+				continue;
+			}
+
+			other_zpos_prop = layer_get_property(other_layer, "zpos");
+			if (!other_zpos_prop) {
+				continue;
+			}
+
+			if (primary_plane->zpos < other_plane->zpos &&
+			    primary_zpos_prop->value > other_zpos_prop->value) {
+				return false;
+			}
+		}
+	}
+
 	/* TODO: check allocation isn't empty */
 
 	return true;
@@ -378,7 +432,7 @@ output_choose_layers(struct liftoff_output *output, struct alloc_result *result,
 
 	if (step->plane_link == &device->planes) { /* Allocation finished */
 		if (step->score > result->best_score &&
-		    check_alloc_valid(result, step)) {
+		    check_alloc_valid(output, result, step)) {
 			/* We found a better allocation */
 			liftoff_log(LIFTOFF_DEBUG,
 				    "%sFound a better allocation with score=%d",
