@@ -406,9 +406,6 @@ int output_choose_layers(struct liftoff_output *output,
 		}
 
 		/* Try to use this layer for the current plane */
-		liftoff_log(LIFTOFF_DEBUG, "  Layer %p -> plane %"PRIu32": "
-			    "applying properties...",
-			    (void *)layer, plane->id);
 		ret = plane_apply(plane, layer, result->req);
 		if (ret == -EINVAL) {
 			liftoff_log(LIFTOFF_DEBUG,
@@ -433,6 +430,11 @@ int output_choose_layers(struct liftoff_output *output,
 			}
 		} else if (ret != -EINVAL && ret != -ERANGE) {
 			return ret;
+		} else {
+			liftoff_log(LIFTOFF_DEBUG,
+				    "  Layer %p -> plane %"PRIu32": "
+				    "test-only commit failed",
+				    (void *)layer, plane->id);
 		}
 
 		drmModeAtomicSetCursor(result->req, cursor);
