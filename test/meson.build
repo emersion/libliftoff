@@ -15,6 +15,8 @@ mock_liftoff = declare_dependency(
 	dependencies: drm.partial_dependency(compile_args: true),
 )
 
+test('check_ndebug', executable('check_ndebug', 'check_ndebug.c'))
+
 bench_exe = executable(
 	'bench',
 	files('bench.c'),
