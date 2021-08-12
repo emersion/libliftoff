@@ -81,7 +81,8 @@ void output_log_layers(struct liftoff_output *output) {
 		return;
 	}
 
-	liftoff_log(LIFTOFF_DEBUG, "Layers on CRTC %"PRIu32":", output->crtc_id);
+	liftoff_log(LIFTOFF_DEBUG, "Layers on CRTC %"PRIu32" (%zu total):",
+		    output->crtc_id, liftoff_list_length(&output->layers));
 	liftoff_list_for_each(layer, &output->layers, link) {
 		if (layer->force_composition) {
 			liftoff_log(LIFTOFF_DEBUG, "  Layer %p "
