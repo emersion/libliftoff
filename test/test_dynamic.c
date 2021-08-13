@@ -19,8 +19,8 @@ struct test_case {
 	void (*run)(struct context *ctx);
 };
 
-static struct liftoff_layer *add_layer(struct liftoff_output *output,
-				       int x, int y, int width, int height)
+static struct liftoff_layer *
+add_layer(struct liftoff_output *output, int x, int y, int width, int height)
 {
 	uint32_t fb_id;
 	struct liftoff_layer *layer;
@@ -40,7 +40,9 @@ static struct liftoff_layer *add_layer(struct liftoff_output *output,
 	return layer;
 }
 
-static void first_commit(struct context *ctx) {
+static void
+first_commit(struct context *ctx)
+{
 	drmModeAtomicReq *req;
 	int ret;
 
@@ -62,7 +64,9 @@ static void first_commit(struct context *ctx) {
 	assert(ctx->commit_count > 1);
 }
 
-static void second_commit(struct context *ctx, bool want_reuse_prev_alloc) {
+static void
+second_commit(struct context *ctx, bool want_reuse_prev_alloc)
+{
 	drmModeAtomicReq *req;
 	int ret;
 
@@ -83,7 +87,9 @@ static void second_commit(struct context *ctx, bool want_reuse_prev_alloc) {
 	drmModeAtomicFree(req);
 }
 
-static void run_same(struct context *ctx) {
+static void
+run_same(struct context *ctx)
+{
 	first_commit(ctx);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 
@@ -91,7 +97,9 @@ static void run_same(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_change_fb(struct context *ctx) {
+static void
+run_change_fb(struct context *ctx)
+{
 	first_commit(ctx);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 
@@ -102,7 +110,9 @@ static void run_change_fb(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_unset_fb(struct context *ctx) {
+static void
+run_unset_fb(struct context *ctx)
+{
 	first_commit(ctx);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 
@@ -112,7 +122,9 @@ static void run_unset_fb(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == NULL);
 }
 
-static void run_set_fb(struct context *ctx) {
+static void
+run_set_fb(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "FB_ID", 0);
 	first_commit(ctx);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == NULL);
@@ -124,7 +136,9 @@ static void run_set_fb(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_add_layer(struct context *ctx) {
+static void
+run_add_layer(struct context *ctx)
+{
 	first_commit(ctx);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 
@@ -134,7 +148,9 @@ static void run_add_layer(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_remove_layer(struct context *ctx) {
+static void
+run_remove_layer(struct context *ctx)
+{
 	first_commit(ctx);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 
@@ -145,7 +161,9 @@ static void run_remove_layer(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_change_composition_layer(struct context *ctx) {
+static void
+run_change_composition_layer(struct context *ctx)
+{
 	first_commit(ctx);
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 
@@ -155,7 +173,9 @@ static void run_change_composition_layer(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_change_alpha(struct context *ctx) {
+static void
+run_change_alpha(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "alpha", 42);
 
 	first_commit(ctx);
@@ -167,7 +187,9 @@ static void run_change_alpha(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_set_alpha_from_opaque(struct context *ctx) {
+static void
+run_set_alpha_from_opaque(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "alpha", 0xFFFF); /* opaque */
 
 	first_commit(ctx);
@@ -179,7 +201,9 @@ static void run_set_alpha_from_opaque(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_set_alpha_from_transparent(struct context *ctx) {
+static void
+run_set_alpha_from_transparent(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "alpha", 0); /* transparent */
 
 	first_commit(ctx);
@@ -191,7 +215,9 @@ static void run_set_alpha_from_transparent(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_unset_alpha_to_opaque(struct context *ctx) {
+static void
+run_unset_alpha_to_opaque(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "alpha", 42);
 
 	first_commit(ctx);
@@ -203,7 +229,9 @@ static void run_unset_alpha_to_opaque(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_unset_alpha_to_transparent(struct context *ctx) {
+static void
+run_unset_alpha_to_transparent(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "alpha", 42);
 
 	first_commit(ctx);
@@ -215,7 +243,9 @@ static void run_unset_alpha_to_transparent(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == NULL);
 }
 
-static void run_change_in_fence_fd(struct context *ctx) {
+static void
+run_change_in_fence_fd(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "IN_FENCE_FD", 42);
 
 	first_commit(ctx);
@@ -227,7 +257,9 @@ static void run_change_in_fence_fd(struct context *ctx) {
 	assert(liftoff_mock_plane_get_layer(ctx->mock_plane) == ctx->layer);
 }
 
-static void run_change_fb_damage_clips(struct context *ctx) {
+static void
+run_change_fb_damage_clips(struct context *ctx)
+{
 	liftoff_layer_set_property(ctx->layer, "FB_DAMAGE_CLIPS", 42);
 
 	first_commit(ctx);
@@ -256,7 +288,9 @@ static const struct test_case tests[] = {
 	{ .name = "change-fb-damage-clips", .run = run_change_fb_damage_clips },
 };
 
-static void run(const struct test_case *test) {
+static void
+run(const struct test_case *test)
+{
 	struct context ctx = {0};
 	struct liftoff_device *device;
 	const char *prop_name;
@@ -306,7 +340,9 @@ static void run(const struct test_case *test) {
 	close(ctx.drm_fd);
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	const char *test_name;
 
 	liftoff_log_set_priority(LIFTOFF_DEBUG);

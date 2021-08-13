@@ -3,7 +3,8 @@
 #include <string.h>
 #include "private.h"
 
-struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output)
+struct liftoff_layer *
+liftoff_layer_create(struct liftoff_output *output)
 {
 	struct liftoff_layer *layer;
 
@@ -18,7 +19,8 @@ struct liftoff_layer *liftoff_layer_create(struct liftoff_output *output)
 	return layer;
 }
 
-void liftoff_layer_destroy(struct liftoff_layer *layer)
+void
+liftoff_layer_destroy(struct liftoff_layer *layer)
 {
 	if (layer == NULL) {
 		return;
@@ -36,8 +38,8 @@ void liftoff_layer_destroy(struct liftoff_layer *layer)
 	free(layer);
 }
 
-struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
-						  const char *name)
+struct liftoff_layer_property *
+layer_get_property(struct liftoff_layer *layer, const char *name)
 {
 	size_t i;
 
@@ -49,8 +51,9 @@ struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
 	return NULL;
 }
 
-int liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
-			       uint64_t value)
+int
+liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
+			   uint64_t value)
 {
 	struct liftoff_layer_property *props;
 	struct liftoff_layer_property *prop;
@@ -89,7 +92,8 @@ int liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 	return 0;
 }
 
-void liftoff_layer_set_fb_composited(struct liftoff_layer *layer)
+void
+liftoff_layer_set_fb_composited(struct liftoff_layer *layer)
 {
 	if (layer->force_composition) {
 		return;
@@ -101,12 +105,14 @@ void liftoff_layer_set_fb_composited(struct liftoff_layer *layer)
 	layer->changed = true;
 }
 
-struct liftoff_plane *liftoff_layer_get_plane(struct liftoff_layer *layer)
+struct liftoff_plane *
+liftoff_layer_get_plane(struct liftoff_layer *layer)
 {
 	return layer->plane;
 }
 
-bool liftoff_layer_needs_composition(struct liftoff_layer *layer)
+bool
+liftoff_layer_needs_composition(struct liftoff_layer *layer)
 {
 	if (!layer_is_visible(layer)) {
 		return false;
@@ -114,7 +120,8 @@ bool liftoff_layer_needs_composition(struct liftoff_layer *layer)
 	return layer->plane == NULL;
 }
 
-void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)
+void
+layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)
 {
 	struct liftoff_layer_property *x_prop, *y_prop, *w_prop, *h_prop;
 
@@ -129,7 +136,8 @@ void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)
 	rect->height = h_prop != NULL ? h_prop->value : 0;
 }
 
-bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b)
+bool
+layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b)
 {
 	struct liftoff_rect ra, rb;
 
@@ -140,7 +148,8 @@ bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b)
 	       ra.x + ra.width > rb.x && ra.y + ra.height > rb.y;
 }
 
-void layer_mark_clean(struct liftoff_layer *layer)
+void
+layer_mark_clean(struct liftoff_layer *layer)
 {
 	size_t i;
 
@@ -151,7 +160,8 @@ void layer_mark_clean(struct liftoff_layer *layer)
 	}
 }
 
-static void log_priority(struct liftoff_layer *layer)
+static void
+log_priority(struct liftoff_layer *layer)
 {
 	if (layer->current_priority == layer->pending_priority) {
 		return;
@@ -162,7 +172,9 @@ static void log_priority(struct liftoff_layer *layer)
 		    layer->pending_priority);
 }
 
-void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
+void
+layer_update_priority(struct liftoff_layer *layer, bool make_current)
+{
 	struct liftoff_layer_property *prop;
 
 	/* TODO: also bump priority when updating other properties */
@@ -178,14 +190,17 @@ void layer_update_priority(struct liftoff_layer *layer, bool make_current) {
 	}
 }
 
-bool layer_has_fb(struct liftoff_layer *layer) {
+bool
+layer_has_fb(struct liftoff_layer *layer)
+{
 	struct liftoff_layer_property *fb_id_prop;
 
 	fb_id_prop = layer_get_property(layer, "FB_ID");
 	return fb_id_prop != NULL && fb_id_prop->value != 0;
 }
 
-bool layer_is_visible(struct liftoff_layer *layer)
+bool
+layer_is_visible(struct liftoff_layer *layer)
 {
 	struct liftoff_layer_property *alpha_prop;
 

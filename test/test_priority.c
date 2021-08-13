@@ -8,8 +8,8 @@
 /* Number of page-flips before the plane allocation has stabilized */
 #define STABILIZE_PAGEFLIP_COUNT 600 /* 10s at 60FPS */
 
-static struct liftoff_layer *add_layer(struct liftoff_output *output,
-				       int x, int y, int width, int height)
+static struct liftoff_layer *
+add_layer(struct liftoff_output *output, int x, int y, int width, int height)
 {
 	uint32_t fb_id;
 	struct liftoff_layer *layer;
@@ -29,7 +29,9 @@ static struct liftoff_layer *add_layer(struct liftoff_output *output,
 	return layer;
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
 	struct liftoff_device *device;

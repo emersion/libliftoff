@@ -81,23 +81,39 @@ struct liftoff_rect {
 	int width, height;
 };
 
-int device_test_commit(struct liftoff_device *device,
-		       drmModeAtomicReq *req, uint32_t flags);
+int
+device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
+		   uint32_t flags);
 
-struct liftoff_layer_property *layer_get_property(struct liftoff_layer *layer,
-						  const char *name);
-void layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
-bool layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
-void layer_mark_clean(struct liftoff_layer *layer);
-void layer_update_priority(struct liftoff_layer *layer, bool make_current);
-bool layer_has_fb(struct liftoff_layer *layer);
-bool layer_is_visible(struct liftoff_layer *layer);
+struct liftoff_layer_property *
+layer_get_property(struct liftoff_layer *layer, const char *name);
 
-struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
-						  const char *name);
-int plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
-		drmModeAtomicReq *req);
+void
+layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
 
-void output_log_layers(struct liftoff_output *output);
+bool
+layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b);
+
+void
+layer_mark_clean(struct liftoff_layer *layer);
+
+void
+layer_update_priority(struct liftoff_layer *layer, bool make_current);
+
+bool
+layer_has_fb(struct liftoff_layer *layer);
+
+bool
+layer_is_visible(struct liftoff_layer *layer);
+
+struct liftoff_plane_property *
+plane_get_property(struct liftoff_plane *plane, const char *name);
+
+int
+plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
+	    drmModeAtomicReq *req);
+
+void
+output_log_layers(struct liftoff_output *output);
 
 #endif

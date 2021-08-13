@@ -6,7 +6,8 @@
 #include <xf86drm.h>
 #include "common.h"
 
-drmModeConnector *pick_connector(int drm_fd, drmModeRes *drm_res)
+drmModeConnector *
+pick_connector(int drm_fd, drmModeRes *drm_res)
 {
 	int i;
 	drmModeConnector *connector;
@@ -22,8 +23,8 @@ drmModeConnector *pick_connector(int drm_fd, drmModeRes *drm_res)
 	return NULL;
 }
 
-drmModeCrtc *pick_crtc(int drm_fd, drmModeRes *drm_res,
-		       drmModeConnector *connector)
+drmModeCrtc *
+pick_crtc(int drm_fd, drmModeRes *drm_res, drmModeConnector *connector)
 {
 	drmModeEncoder *enc;
 	uint32_t crtc_id;
@@ -66,7 +67,8 @@ drmModeCrtc *pick_crtc(int drm_fd, drmModeRes *drm_res,
 	}
 }
 
-void disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res, uint32_t crtc_id)
+void
+disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res, uint32_t crtc_id)
 {
 	int i;
 
@@ -79,8 +81,9 @@ void disable_all_crtcs_except(int drm_fd, drmModeRes *drm_res, uint32_t crtc_id)
 	}
 }
 
-bool dumb_fb_init(struct dumb_fb *fb, int drm_fd, uint32_t format,
-		  uint32_t width, uint32_t height)
+bool
+dumb_fb_init(struct dumb_fb *fb, int drm_fd, uint32_t format, uint32_t width,
+	     uint32_t height)
 {
 	int ret;
 	uint32_t fb_id;
@@ -116,7 +119,8 @@ bool dumb_fb_init(struct dumb_fb *fb, int drm_fd, uint32_t format,
 	return true;
 }
 
-void *dumb_fb_map(struct dumb_fb *fb, int drm_fd)
+void *
+dumb_fb_map(struct dumb_fb *fb, int drm_fd)
 {
 	int ret;
 
@@ -130,7 +134,8 @@ void *dumb_fb_map(struct dumb_fb *fb, int drm_fd)
 		    map.offset);
 }
 
-void dumb_fb_fill(struct dumb_fb *fb, int drm_fd, uint32_t color)
+void
+dumb_fb_fill(struct dumb_fb *fb, int drm_fd, uint32_t color)
 {
 	uint32_t *data;
 	size_t i;

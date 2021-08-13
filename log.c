@@ -5,8 +5,8 @@
 
 static enum liftoff_log_priority log_priority = LIFTOFF_ERROR;
 
-static void log_stderr(enum liftoff_log_priority priority, const char *fmt,
-		       va_list args)
+static void
+log_stderr(enum liftoff_log_priority priority, const char *fmt, va_list args)
 {
 	vfprintf(stderr, fmt, args);
 	fprintf(stderr, "\n");
@@ -14,12 +14,14 @@ static void log_stderr(enum liftoff_log_priority priority, const char *fmt,
 
 static liftoff_log_handler log_handler = log_stderr;
 
-void liftoff_log_set_priority(enum liftoff_log_priority priority)
+void
+liftoff_log_set_priority(enum liftoff_log_priority priority)
 {
 	log_priority = priority;
 }
 
-void liftoff_log_set_handler(liftoff_log_handler handler) {
+void
+liftoff_log_set_handler(liftoff_log_handler handler) {
 	if (handler) {
 		log_handler = handler;
 	} else {
@@ -27,12 +29,14 @@ void liftoff_log_set_handler(liftoff_log_handler handler) {
 	}
 }
 
-bool log_has(enum liftoff_log_priority priority)
+bool
+log_has(enum liftoff_log_priority priority)
 {
 	return priority <= log_priority;
 }
 
-void liftoff_log(enum liftoff_log_priority priority, const char *fmt, ...)
+void
+liftoff_log(enum liftoff_log_priority priority, const char *fmt, ...)
 {
 	if (!log_has(priority)) {
 		return;
@@ -44,7 +48,8 @@ void liftoff_log(enum liftoff_log_priority priority, const char *fmt, ...)
 	va_end(args);
 }
 
-void liftoff_log_errno(enum liftoff_log_priority priority, const char *msg)
+void
+liftoff_log_errno(enum liftoff_log_priority priority, const char *msg)
 {
 	// Ensure errno is still set to its original value when we return
 	int prev_errno = errno;

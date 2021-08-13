@@ -95,9 +95,9 @@ struct alloc_step {
 	char log_prefix[64];
 };
 
-static void plane_step_init_next(struct alloc_step *step,
-				 struct alloc_step *prev,
-				 struct liftoff_layer *layer)
+static void
+plane_step_init_next(struct alloc_step *step, struct alloc_step *prev,
+		     struct liftoff_layer *layer)
 {
 	struct liftoff_plane *plane;
 	struct liftoff_layer_property *zpos_prop;
@@ -146,8 +146,8 @@ static void plane_step_init_next(struct alloc_step *step,
 	}
 }
 
-static bool is_layer_allocated(struct alloc_step *step,
-			       struct liftoff_layer *layer)
+static bool
+is_layer_allocated(struct alloc_step *step, struct liftoff_layer *layer)
 {
 	size_t i;
 
@@ -161,9 +161,9 @@ static bool is_layer_allocated(struct alloc_step *step,
 	return false;
 }
 
-static bool has_composited_layer_over(struct liftoff_output *output,
-				      struct alloc_step *step,
-				      struct liftoff_layer *layer)
+static bool
+has_composited_layer_over(struct liftoff_output *output,
+			  struct alloc_step *step, struct liftoff_layer *layer)
 {
 	struct liftoff_layer *other_layer;
 	struct liftoff_layer_property *zpos_prop, *other_zpos_prop;
@@ -192,9 +192,9 @@ static bool has_composited_layer_over(struct liftoff_output *output,
 	return false;
 }
 
-static bool has_allocated_layer_over(struct liftoff_output *output,
-				     struct alloc_step *step,
-				     struct liftoff_layer *layer)
+static bool
+has_allocated_layer_over(struct liftoff_output *output, struct alloc_step *step,
+			 struct liftoff_layer *layer)
 {
 	ssize_t i;
 	struct liftoff_plane *other_plane;
@@ -238,9 +238,9 @@ static bool has_allocated_layer_over(struct liftoff_output *output,
 	return false;
 }
 
-static bool has_allocated_plane_under(struct liftoff_output *output,
-				      struct alloc_step *step,
-				      struct liftoff_layer *layer)
+static bool
+has_allocated_plane_under(struct liftoff_output *output,
+			  struct alloc_step *step, struct liftoff_layer *layer)
 {
 	struct liftoff_plane *plane, *other_plane;
 	ssize_t i;
@@ -269,9 +269,10 @@ static bool has_allocated_plane_under(struct liftoff_output *output,
 	return false;
 }
 
-static bool check_layer_plane_compatible(struct alloc_step *step,
-					 struct liftoff_layer *layer,
-					 struct liftoff_plane *plane)
+static bool
+check_layer_plane_compatible(struct alloc_step *step,
+			     struct liftoff_layer *layer,
+			     struct liftoff_plane *plane)
 {
 	struct liftoff_output *output;
 	struct liftoff_layer_property *zpos_prop;
@@ -332,8 +333,8 @@ static bool check_layer_plane_compatible(struct alloc_step *step,
 	return true;
 }
 
-static bool check_alloc_valid(struct alloc_result *result,
-			      struct alloc_step *step)
+static bool
+check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 {
 	/* If composition isn't used, we need to have allocated all
 	 * layers. */
@@ -362,9 +363,9 @@ static bool check_alloc_valid(struct alloc_result *result,
 	return true;
 }
 
-static int output_choose_layers(struct liftoff_output *output,
-				struct alloc_result *result,
-				struct alloc_step *step)
+static int
+output_choose_layers(struct liftoff_output *output, struct alloc_result *result,
+		     struct alloc_step *step)
 {
 	struct liftoff_device *device;
 	struct liftoff_plane *plane;
@@ -471,7 +472,8 @@ skip:
 	return 0;
 }
 
-static int apply_current(struct liftoff_device *device, drmModeAtomicReq *req)
+static int
+apply_current(struct liftoff_device *device, drmModeAtomicReq *req)
 {
 	struct liftoff_plane *plane;
 	int cursor, ret;
@@ -490,7 +492,8 @@ static int apply_current(struct liftoff_device *device, drmModeAtomicReq *req)
 	return 0;
 }
 
-static bool layer_needs_realloc(struct liftoff_layer *layer)
+static bool
+layer_needs_realloc(struct liftoff_layer *layer)
 {
 	size_t i;
 	struct liftoff_layer_property *prop;
@@ -545,8 +548,9 @@ static bool layer_needs_realloc(struct liftoff_layer *layer)
 	return false;
 }
 
-static int reuse_previous_alloc(struct liftoff_output *output,
-				drmModeAtomicReq *req, uint32_t flags)
+static int
+reuse_previous_alloc(struct liftoff_output *output, drmModeAtomicReq *req,
+		     uint32_t flags)
 {
 	struct liftoff_device *device;
 	struct liftoff_layer *layer;
@@ -578,7 +582,8 @@ static int reuse_previous_alloc(struct liftoff_output *output,
 	return ret;
 }
 
-static void mark_layers_clean(struct liftoff_output *output)
+static void
+mark_layers_clean(struct liftoff_output *output)
 {
 	struct liftoff_layer *layer;
 
@@ -589,7 +594,8 @@ static void mark_layers_clean(struct liftoff_output *output)
 	}
 }
 
-static void update_layers_priority(struct liftoff_device *device)
+static void
+update_layers_priority(struct liftoff_device *device)
 {
 	struct liftoff_output *output;
 	struct liftoff_layer *layer;
@@ -608,7 +614,8 @@ static void update_layers_priority(struct liftoff_device *device)
 	}
 }
 
-static void log_reuse(struct liftoff_output *output)
+static void
+log_reuse(struct liftoff_output *output)
 {
 	if (output->alloc_reused_counter == 0) {
 		liftoff_log(LIFTOFF_DEBUG,
@@ -618,7 +625,8 @@ static void log_reuse(struct liftoff_output *output)
 	output->alloc_reused_counter++;
 }
 
-static void log_no_reuse(struct liftoff_output *output)
+static void
+log_no_reuse(struct liftoff_output *output)
 {
 	liftoff_log(LIFTOFF_DEBUG, "Computing plane allocation on output %p",
 		    (void *)output);
@@ -632,7 +640,8 @@ static void log_no_reuse(struct liftoff_output *output)
 	}
 }
 
-static size_t non_composition_layers_length(struct liftoff_output *output)
+static size_t
+non_composition_layers_length(struct liftoff_output *output)
 {
 	struct liftoff_layer *layer;
 	size_t n;
@@ -648,8 +657,9 @@ static size_t non_composition_layers_length(struct liftoff_output *output)
 	return n;
 }
 
-int liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
-			 uint32_t flags)
+int
+liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
+		     uint32_t flags)
 {
 	struct liftoff_device *device;
 	struct liftoff_plane *plane;

@@ -9,11 +9,20 @@ struct liftoff_list {
 	struct liftoff_list *next;
 };
 
-void liftoff_list_init(struct liftoff_list *list);
-void liftoff_list_insert(struct liftoff_list *list, struct liftoff_list *elm);
-void liftoff_list_remove(struct liftoff_list *elm);
-size_t liftoff_list_length(const struct liftoff_list *list);
-bool liftoff_list_empty(const struct liftoff_list *list);
+void
+liftoff_list_init(struct liftoff_list *list);
+
+void
+liftoff_list_insert(struct liftoff_list *list, struct liftoff_list *elm);
+
+void
+liftoff_list_remove(struct liftoff_list *elm);
+
+size_t
+liftoff_list_length(const struct liftoff_list *list);
+
+bool
+liftoff_list_empty(const struct liftoff_list *list);
 
 #define liftoff_container_of(ptr, sample, member)			\
 	(__typeof__(sample))((char *)(ptr) -				\

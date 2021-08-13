@@ -6,8 +6,8 @@
 #include <string.h>
 #include "libdrm_mock.h"
 
-static struct liftoff_layer *add_layer(struct liftoff_output *output,
-				       int x, int y, int width, int height)
+static struct liftoff_layer *
+add_layer(struct liftoff_output *output, int x, int y, int width, int height)
 {
 	uint32_t fb_id;
 	struct liftoff_layer *layer;
@@ -606,7 +606,8 @@ static struct test_case tests[] = {
 	},
 };
 
-static bool test_needs_composition(struct test_layer *test_layers)
+static bool
+test_needs_composition(struct test_layer *test_layers)
 {
 	size_t i;
 
@@ -619,7 +620,8 @@ static bool test_needs_composition(struct test_layer *test_layers)
 	return false;
 }
 
-static void run_test(struct test_layer *test_layers)
+static void
+run_test(struct test_layer *test_layers)
 {
 	size_t i, j;
 	ssize_t plane_index_got, plane_index_want;
@@ -719,7 +721,8 @@ static void run_test(struct test_layer *test_layers)
 	close(drm_fd);
 }
 
-static void test_basic(void)
+static void
+test_basic(void)
 {
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
@@ -756,7 +759,8 @@ static void test_basic(void)
 
 /* Checks that the library doesn't allocate a plane for a layer without a
  * non-zero FB_ID set. */
-static void test_no_fb_fail(bool zero_fb_id)
+static void
+test_no_fb_fail(bool zero_fb_id)
 {
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
@@ -796,7 +800,8 @@ static void test_no_fb_fail(bool zero_fb_id)
 
 /* Checks that the library doesn't fallback to composition when a layer doesn't
  * have a FB. */
-static void test_composition_zero_fb(void)
+static void
+test_composition_zero_fb(void)
 {
 	struct liftoff_mock_plane *mock_plane;
 	int drm_fd;
@@ -839,7 +844,9 @@ static void test_composition_zero_fb(void)
 	close(drm_fd);
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	const char *test_name;
 	size_t i;
 

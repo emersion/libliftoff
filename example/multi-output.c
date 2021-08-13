@@ -24,9 +24,9 @@ static const uint32_t colors[] = {
 	0xFFFFFF00, /* yellow */
 };
 
-static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output,
-				       int x, int y, int width, int height,
-				       bool with_alpha)
+static struct liftoff_layer *
+add_layer(int drm_fd, struct liftoff_output *output, int x, int y, int width,
+	  int height, bool with_alpha)
 {
 	static bool first = true;
 	static size_t color_idx = 0;
@@ -65,7 +65,8 @@ static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output
 	return layer;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	int drm_fd;
 	struct liftoff_device *device;

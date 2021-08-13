@@ -5,8 +5,8 @@
 #include <sys/types.h>
 #include "private.h"
 
-struct liftoff_output *liftoff_output_create(struct liftoff_device *device,
-					     uint32_t crtc_id)
+struct liftoff_output *
+liftoff_output_create(struct liftoff_device *device, uint32_t crtc_id)
 {
 	struct liftoff_output *output;
 	ssize_t crtc_index;
@@ -35,7 +35,8 @@ struct liftoff_output *liftoff_output_create(struct liftoff_device *device,
 	return output;
 }
 
-void liftoff_output_destroy(struct liftoff_output *output)
+void
+liftoff_output_destroy(struct liftoff_output *output)
 {
 	if (output == NULL) {
 		return;
@@ -45,8 +46,9 @@ void liftoff_output_destroy(struct liftoff_output *output)
 	free(output);
 }
 
-void liftoff_output_set_composition_layer(struct liftoff_output *output,
-					  struct liftoff_layer *layer)
+void
+liftoff_output_set_composition_layer(struct liftoff_output *output,
+				     struct liftoff_layer *layer)
 {
 	assert(layer->output == output);
 	if (layer != output->composition_layer) {
@@ -55,7 +57,8 @@ void liftoff_output_set_composition_layer(struct liftoff_output *output,
 	output->composition_layer = layer;
 }
 
-bool liftoff_output_needs_composition(struct liftoff_output *output)
+bool
+liftoff_output_needs_composition(struct liftoff_output *output)
 {
 	struct liftoff_layer *layer;
 
@@ -68,11 +71,15 @@ bool liftoff_output_needs_composition(struct liftoff_output *output)
 	return false;
 }
 
-static double fp16_to_double(uint64_t val) {
+static double
+fp16_to_double(uint64_t val)
+{
 	return (double)(val >> 16) + (double)(val & 0xFFFF) / 0xFFFF;
 }
 
-void output_log_layers(struct liftoff_output *output) {
+void
+output_log_layers(struct liftoff_output *output)
+{
 	struct liftoff_layer *layer;
 	size_t i;
 	bool is_composition_layer;

@@ -25,10 +25,9 @@ static const uint32_t colors[] = {
 	0xFFFFFF00, /* yellow */
 };
 
-static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output,
-				       int x, int y, int width, int height,
-				       bool with_alpha, bool white,
-				       struct dumb_fb *fb)
+static struct liftoff_layer *
+add_layer(int drm_fd, struct liftoff_output *output, int x, int y, int width,
+	  int height, bool with_alpha, bool white, struct dumb_fb *fb)
 {
 	static size_t color_idx = 0;
 	uint32_t color;
@@ -65,8 +64,9 @@ static struct liftoff_layer *add_layer(int drm_fd, struct liftoff_output *output
 }
 
 /* Naive compositor for opaque buffers */
-static void composite(int drm_fd, struct dumb_fb *dst_fb, struct dumb_fb *src_fb,
-		      int dst_x, int dst_y)
+static void
+composite(int drm_fd, struct dumb_fb *dst_fb, struct dumb_fb *src_fb, int dst_x,
+	  int dst_y)
 {
 	uint8_t *dst, *src;
 	int i, y, src_width;
@@ -97,7 +97,8 @@ static void composite(int drm_fd, struct dumb_fb *dst_fb, struct dumb_fb *src_fb
 	munmap(src, src_fb->size);
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	int opt;
 	size_t layers_len;

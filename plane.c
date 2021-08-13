@@ -4,8 +4,9 @@
 #include <string.h>
 #include "private.h"
 
-static int guess_plane_zpos_from_type(struct liftoff_device *device,
-				      uint32_t plane_id, uint32_t type)
+static int
+guess_plane_zpos_from_type(struct liftoff_device *device, uint32_t plane_id,
+			   uint32_t type)
 {
 	struct liftoff_plane *primary;
 
@@ -31,8 +32,8 @@ static int guess_plane_zpos_from_type(struct liftoff_device *device,
 	return 0;
 }
 
-struct liftoff_plane *liftoff_plane_create(struct liftoff_device *device,
-					   uint32_t id)
+struct liftoff_plane *
+liftoff_plane_create(struct liftoff_device *device, uint32_t id)
 {
 	struct liftoff_plane *plane, *cur;
 	drmModePlane *drm_plane;
@@ -140,7 +141,8 @@ struct liftoff_plane *liftoff_plane_create(struct liftoff_device *device,
 	return plane;
 }
 
-void liftoff_plane_destroy(struct liftoff_plane *plane)
+void
+liftoff_plane_destroy(struct liftoff_plane *plane)
 {
 	if (plane->layer != NULL) {
 		plane->layer->plane = NULL;
@@ -150,13 +152,14 @@ void liftoff_plane_destroy(struct liftoff_plane *plane)
 	free(plane);
 }
 
-uint32_t liftoff_plane_get_id(struct liftoff_plane *plane)
+uint32_t
+liftoff_plane_get_id(struct liftoff_plane *plane)
 {
 	return plane->id;
 }
 
-struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
-						  const char *name)
+struct liftoff_plane_property *
+plane_get_property(struct liftoff_plane *plane, const char *name)
 {
 	size_t i;
 
@@ -168,8 +171,9 @@ struct liftoff_plane_property *plane_get_property(struct liftoff_plane *plane,
 	return NULL;
 }
 
-static int plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
-			  struct liftoff_plane_property *prop, uint64_t value)
+static int
+plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
+	       struct liftoff_plane_property *prop, uint64_t value)
 {
 	int ret;
 
@@ -183,9 +187,9 @@ static int plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
 	return 0;
 }
 
-static int set_plane_prop_str(struct liftoff_plane *plane,
-			      drmModeAtomicReq *req, const char *name,
-			      uint64_t value)
+static int
+set_plane_prop_str(struct liftoff_plane *plane, drmModeAtomicReq *req,
+		   const char *name, uint64_t value)
 {
 	struct liftoff_plane_property *prop;
 
@@ -200,8 +204,9 @@ static int set_plane_prop_str(struct liftoff_plane *plane,
 	return plane_set_prop(plane, req, prop, value);
 }
 
-int plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
-		drmModeAtomicReq *req)
+int
+plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
+	    drmModeAtomicReq *req)
 {
 	int cursor, ret;
 	size_t i;

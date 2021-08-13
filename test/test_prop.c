@@ -5,8 +5,8 @@
 #include <string.h>
 #include "libdrm_mock.h"
 
-static struct liftoff_layer *add_layer(struct liftoff_output *output,
-				       int x, int y, int width, int height)
+static struct liftoff_layer *
+add_layer(struct liftoff_output *output, int x, int y, int width, int height)
 {
 	uint32_t fb_id;
 	struct liftoff_layer *layer;
@@ -26,7 +26,8 @@ static struct liftoff_layer *add_layer(struct liftoff_output *output,
 	return layer;
 }
 
-static int test_prop_default(const char *prop_name)
+static int
+test_prop_default(const char *prop_name)
 {
 	struct liftoff_mock_plane *mock_plane_with_prop,
 				  *mock_plane_without_prop;
@@ -123,7 +124,8 @@ static int test_prop_default(const char *prop_name)
 }
 
 /* Checks that a fully transparent layer is ignored. */
-static int test_ignore_alpha(void)
+static int
+test_ignore_alpha(void)
 {
 	struct liftoff_mock_plane *mock_plane;
 	drmModePropertyRes prop = {0};
@@ -166,7 +168,9 @@ static int test_ignore_alpha(void)
 	return 0;
 }
 
-static int test_immutable_zpos(void) {
+static int
+test_immutable_zpos(void)
+{
 	struct liftoff_mock_plane *mock_plane1, *mock_plane2;
 	drmModePropertyRes prop = {0};
 	uint64_t prop_value;
@@ -239,7 +243,9 @@ static int test_immutable_zpos(void) {
 	return 0;
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	const char *test_name;
 
 	liftoff_log_set_priority(LIFTOFF_DEBUG);

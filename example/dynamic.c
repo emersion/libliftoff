@@ -33,9 +33,10 @@ static struct liftoff_output *output = NULL;
 static struct example_layer layers[LAYERS_LEN] = {0};
 static size_t active_layer_idx = 2;
 
-static bool init_layer(int drm_fd, struct example_layer *layer,
-		       struct liftoff_output *output, int width, int height,
-		       bool with_alpha)
+static bool
+init_layer(int drm_fd, struct example_layer *layer,
+	   struct liftoff_output *output, int width, int height,
+	   bool with_alpha)
 {
 	static size_t color_idx = 0;
 	static float color_value = 1.0;
@@ -65,7 +66,8 @@ static bool init_layer(int drm_fd, struct example_layer *layer,
 	return true;
 }
 
-static void draw_layer(int drm_fd, struct example_layer *layer)
+static void
+draw_layer(int drm_fd, struct example_layer *layer)
 {
 	uint32_t color;
 	struct dumb_fb *fb;
@@ -85,7 +87,8 @@ static void draw_layer(int drm_fd, struct example_layer *layer)
 	liftoff_layer_set_property(layer->layer, "CRTC_Y", layer->y);
 }
 
-static bool draw(void)
+static bool
+draw(void)
 {
 	struct example_layer *active_layer;
 	drmModeAtomicReq *req;
@@ -138,13 +141,15 @@ static bool draw(void)
 	return true;
 }
 
-static void page_flip_handler(int fd, unsigned seq, unsigned tv_sec,
-			      unsigned tv_usec, unsigned crtc_id, void *data)
+static void
+page_flip_handler(int fd, unsigned seq, unsigned tv_sec, unsigned tv_usec,
+		  unsigned crtc_id, void *data)
 {
 	draw();
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	drmModeRes *drm_res;
 	drmModeCrtc *crtc;

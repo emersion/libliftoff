@@ -11,8 +11,8 @@
 #define MAX_PLANES 128
 #define MAX_LAYERS 128
 
-static struct liftoff_layer *add_layer(struct liftoff_output *output,
-				       int x, int y, int width, int height)
+static struct liftoff_layer *
+add_layer(struct liftoff_output *output, int x, int y, int width, int height)
 {
 	uint32_t fb_id;
 	struct liftoff_layer *layer;
@@ -32,7 +32,8 @@ static struct liftoff_layer *add_layer(struct liftoff_output *output,
 	return layer;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	int opt;
 	size_t planes_len, layers_len;

@@ -5,7 +5,8 @@
 #include "log.h"
 #include "private.h"
 
-struct liftoff_device *liftoff_device_create(int drm_fd)
+struct liftoff_device *
+liftoff_device_create(int drm_fd)
 {
 	struct liftoff_device *device;
 	drmModeRes *drm_res;
@@ -49,7 +50,8 @@ struct liftoff_device *liftoff_device_create(int drm_fd)
 	return device;
 }
 
-void liftoff_device_destroy(struct liftoff_device *device)
+void
+liftoff_device_destroy(struct liftoff_device *device)
 {
 	struct liftoff_plane *plane, *tmp;
 
@@ -65,7 +67,8 @@ void liftoff_device_destroy(struct liftoff_device *device)
 	free(device);
 }
 
-int liftoff_device_register_all_planes(struct liftoff_device *device)
+int
+liftoff_device_register_all_planes(struct liftoff_device *device)
 {
 	drmModePlaneRes *drm_plane_res;
 	uint32_t i;
@@ -86,8 +89,9 @@ int liftoff_device_register_all_planes(struct liftoff_device *device)
 	return 0;
 }
 
-int device_test_commit(struct liftoff_device *device,
-		       drmModeAtomicReq *req, uint32_t flags)
+int
+device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
+		   uint32_t flags)
 {
 	int ret;
 
