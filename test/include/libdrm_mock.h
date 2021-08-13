@@ -8,6 +8,12 @@
 extern uint32_t liftoff_mock_drm_crtc_id;
 extern size_t liftoff_mock_commit_count;
 
+/**
+ * Some drivers require the primary plane to be enabled in order to light up a
+ * CRTC (e.g. i915). If this variable is set to true, this behavior is mimicked.
+ */
+extern bool liftoff_mock_require_primary_plane;
+
 struct liftoff_layer;
 
 int liftoff_mock_drm_open(void);

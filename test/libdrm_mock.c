@@ -16,6 +16,7 @@
 
 uint32_t liftoff_mock_drm_crtc_id = 0xCC000000;
 size_t liftoff_mock_commit_count = 0;
+bool liftoff_mock_require_primary_plane = false;
 
 struct liftoff_mock_plane {
 	uint32_t id;
@@ -277,8 +278,9 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 {
 	size_t i, j;
 	struct liftoff_mock_plane *plane;
-	uint64_t fb_id, crtc_id;
+	uint64_t type, fb_id, crtc_id;
 	bool has_fb, has_crtc, found;
+	bool any_plane_enabled, primary_plane_enabled;
 	struct liftoff_layer *layer;
 
 	assert_drm_fd(fd);
@@ -286,12 +288,15 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 
 	liftoff_mock_commit_count++;
 
+	any_plane_enabled = false;
+	primary_plane_enabled = false;
 	for (i = 0; i < MAX_PLANES; i++) {
 		plane = &mock_planes[i];
 		if (plane->id == 0) {
 			break;
 		}
 
+		type = plane->prop_values[PLANE_TYPE];
 		fb_id = plane->prop_values[PLANE_FB_ID];
 		crtc_id = plane->prop_values[PLANE_CRTC_ID];
 		mock_atomic_req_get_property(req, plane->id, PLANE_FB_ID,
@@ -335,7 +340,19 @@ int drmModeAtomicCommit(int fd, drmModeAtomicReq *req, uint32_t flags,
 					plane->id, (void *)layer);
 				return -EINVAL;
 			}
+
+			any_plane_enabled = true;
+			if (type == DRM_PLANE_TYPE_PRIMARY) {
+				primary_plane_enabled = true;
+			}
 		}
+	}
+
+	if (liftoff_mock_require_primary_plane && any_plane_enabled &&
+	    !primary_plane_enabled) {
+		fprintf(stderr, "libdrm_mock: cannot light up CRTC without "
+			"enabling the primary plane\n");
+		return -EINVAL;
 	}
 
 	if (!(flags & DRM_MODE_ATOMIC_TEST_ONLY)) {

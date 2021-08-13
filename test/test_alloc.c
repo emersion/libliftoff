@@ -636,6 +636,8 @@ static void run_test(struct test_layer *test_layers)
 	int ret;
 	uint32_t plane_id;
 
+	liftoff_mock_require_primary_plane = true;
+
 	for (i = 0; i < test_setup_len; i++) {
 		mock_planes[i] = liftoff_mock_drm_create_plane(test_setup[i].type);
 	}
