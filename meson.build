@@ -14,6 +14,10 @@ project(
 cc = meson.get_compiler('c')
 
 add_project_arguments(cc.get_supported_arguments([
+	'-Wundef',
+	'-Wmissing-prototypes',
+	'-Walloca',
+
 	'-Wno-missing-braces',
 	'-Wno-unused-parameter',
 ]), language: 'c')

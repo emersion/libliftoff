@@ -269,9 +269,9 @@ static bool has_allocated_plane_under(struct liftoff_output *output,
 	return false;
 }
 
-bool check_layer_plane_compatible(struct alloc_step *step,
-				  struct liftoff_layer *layer,
-				  struct liftoff_plane *plane)
+static bool check_layer_plane_compatible(struct alloc_step *step,
+					 struct liftoff_layer *layer,
+					 struct liftoff_plane *plane)
 {
 	struct liftoff_output *output;
 	struct liftoff_layer_property *zpos_prop;
@@ -332,7 +332,8 @@ bool check_layer_plane_compatible(struct alloc_step *step,
 	return true;
 }
 
-bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
+static bool check_alloc_valid(struct alloc_result *result,
+			      struct alloc_step *step)
 {
 	/* If composition isn't used, we need to have allocated all
 	 * layers. */
@@ -361,8 +362,9 @@ bool check_alloc_valid(struct alloc_result *result, struct alloc_step *step)
 	return true;
 }
 
-int output_choose_layers(struct liftoff_output *output,
-			 struct alloc_result *result, struct alloc_step *step)
+static int output_choose_layers(struct liftoff_output *output,
+				struct alloc_result *result,
+				struct alloc_step *step)
 {
 	struct liftoff_device *device;
 	struct liftoff_plane *plane;
