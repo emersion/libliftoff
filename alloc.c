@@ -52,8 +52,10 @@
  *
  * In practice, the primary plane is treated separately. This is where layers
  * that can't be mapped to any plane (e.g. layer 1 in our example) will be
- * composited. The primary plane is the first that will be allocated. Then all
- * other planes will be allocated, from the topmost one to the bottommost one.
+ * composited. The primary plane is the first that will be allocated, because
+ * some drivers require it to be enabled in order to light up any other plane.
+ * Then all other planes will be allocated, from the topmost one to the
+ * bottommost one.
  *
  * The "zpos" property (which defines ordering between layers/planes) is handled
  * as a special case. If it's set on layers, it adds additional constraints on
