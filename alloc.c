@@ -99,7 +99,7 @@ static void plane_step_init_next(struct alloc_step *step,
 {
 	struct liftoff_plane *plane;
 	struct liftoff_layer_property *zpos_prop;
-	size_t max_len, i;
+	size_t len;
 
 	plane = liftoff_container_of(prev->plane_link, plane, link);
 
@@ -131,11 +131,17 @@ static void plane_step_init_next(struct alloc_step *step,
 		step->last_layer_zpos = prev->last_layer_zpos;
 	}
 
-	max_len = sizeof(step->log_prefix) - 1;
-	for (i = 0; i < 2 * step->plane_idx && i < max_len; i++) {
-		step->log_prefix[i] = ' ';
+	if (layer != NULL) {
+		len = strlen(prev->log_prefix) + 2;
+		if (len > sizeof(step->log_prefix) - 1) {
+			len = sizeof(step->log_prefix) - 1;
+		}
+		memset(step->log_prefix, ' ', len);
+		step->log_prefix[len] = '\0';
+	} else {
+		memcpy(step->log_prefix, prev->log_prefix,
+		       sizeof(step->log_prefix));
 	}
-	step->log_prefix[i] = '\0';
 }
 
 static bool is_layer_allocated(struct alloc_step *step,
@@ -282,7 +288,7 @@ bool check_layer_plane_compatible(struct alloc_step *step,
 			/* This layer needs to be on top of the last
 			 * allocated one */
 			liftoff_log(LIFTOFF_DEBUG,
-				    "%sLayer %p -> plane %"PRIu32": "
+				    "%s Layer %p -> plane %"PRIu32": "
 				    "layer zpos invalid",
 				    step->log_prefix, (void *)layer, plane->id);
 			return false;
@@ -295,7 +301,7 @@ bool check_layer_plane_compatible(struct alloc_step *step,
 			 * sorted by zpos it means it has the same zpos,
 			 * ie. undefined ordering). */
 			liftoff_log(LIFTOFF_DEBUG,
-				    "%sLayer %p -> plane %"PRIu32": "
+				    "%s Layer %p -> plane %"PRIu32": "
 				    "plane zpos invalid",
 				    step->log_prefix, (void *)layer, plane->id);
 			return false;
@@ -305,7 +311,7 @@ bool check_layer_plane_compatible(struct alloc_step *step,
 	if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
 	    has_composited_layer_over(output, step, layer)) {
 		liftoff_log(LIFTOFF_DEBUG,
-			    "%sLayer %p -> plane %"PRIu32": "
+			    "%s Layer %p -> plane %"PRIu32": "
 			    "has composited layer on top",
 			    step->log_prefix, (void *)layer, plane->id);
 		return false;
@@ -314,7 +320,7 @@ bool check_layer_plane_compatible(struct alloc_step *step,
 	if (plane->type != DRM_PLANE_TYPE_PRIMARY &&
 	    layer == layer->output->composition_layer) {
 		liftoff_log(LIFTOFF_DEBUG,
-			    "%sLayer %p -> plane %"PRIu32": "
+			    "%s Layer %p -> plane %"PRIu32": "
 			    "cannot put composition layer on "
 			    "non-primary plane",
 			    step->log_prefix, (void *)layer, plane->id);
@@ -418,7 +424,7 @@ int output_choose_layers(struct liftoff_output *output,
 		ret = plane_apply(plane, layer, result->req);
 		if (ret == -EINVAL) {
 			liftoff_log(LIFTOFF_DEBUG,
-				    "%sLayer %p -> plane %"PRIu32": "
+				    "%s Layer %p -> plane %"PRIu32": "
 				    "incompatible properties",
 				    step->log_prefix, (void *)layer, plane->id);
 			continue;
@@ -429,7 +435,7 @@ int output_choose_layers(struct liftoff_output *output,
 		ret = device_test_commit(device, result->req, result->flags);
 		if (ret == 0) {
 			liftoff_log(LIFTOFF_DEBUG,
-				    "%sLayer %p -> plane %"PRIu32": success",
+				    "%s Layer %p -> plane %"PRIu32": success",
 				    step->log_prefix, (void *)layer, plane->id);
 			/* Continue with the next plane */
 			plane_step_init_next(&next_step, step, layer);
@@ -441,7 +447,7 @@ int output_choose_layers(struct liftoff_output *output,
 			return ret;
 		} else {
 			liftoff_log(LIFTOFF_DEBUG,
-				    "%sLayer %p -> plane %"PRIu32": "
+				    "%s Layer %p -> plane %"PRIu32": "
 				    "test-only commit failed",
 				    step->log_prefix, (void *)layer, plane->id);
 		}
