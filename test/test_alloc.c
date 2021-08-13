@@ -159,7 +159,7 @@ static struct test_case tests[] = {
 				.height = 1080,
 				.zpos = 1,
 				.compat = { PRIMARY_PLANE },
-				.result = PRIMARY_PLANE,
+				.result = NULL,
 			},
 			{
 				.width = 100,
@@ -190,7 +190,7 @@ static struct test_case tests[] = {
 				.height = 1080,
 				.zpos = 1,
 				.compat = { PRIMARY_PLANE },
-				.result = PRIMARY_PLANE,
+				.result = NULL,
 			},
 			{
 				.width = 100,
@@ -218,7 +218,7 @@ static struct test_case tests[] = {
 				.height = 1080,
 				.zpos = 1,
 				.compat = { PRIMARY_PLANE },
-				.result = PRIMARY_PLANE,
+				.result = NULL,
 			},
 			{
 				.width = 100,
@@ -282,7 +282,7 @@ static struct test_case tests[] = {
 				.height = 1080,
 				.zpos = 1,
 				.compat = { PRIMARY_PLANE },
-				.result = PRIMARY_PLANE,
+				.result = NULL,
 			},
 			{
 				.width = 100,
@@ -394,7 +394,7 @@ static struct test_case tests[] = {
 				.height = 1080,
 				.zpos = 1,
 				.compat = { PRIMARY_PLANE },
-				.result = PRIMARY_PLANE,
+				.result = NULL,
 			},
 			{
 				.width = 100,
@@ -435,7 +435,7 @@ static struct test_case tests[] = {
 				.height = 1080,
 				.zpos = 1,
 				.compat = { PRIMARY_PLANE },
-				.result = PRIMARY_PLANE,
+				.result = NULL,
 			},
 			{
 				.width = 100,

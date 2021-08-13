@@ -119,23 +119,16 @@ liftoff_plane_create(struct liftoff_device *device, uint32_t id)
 	}
 
 	/* During plane allocation, we will use the plane list order to fill
-	 * planes with FBs. Primary planes need to be filled first, then planes
-	 * far from the primary planes, then planes closer and closer to the
-	 * primary plane. */
-	if (plane->type == DRM_PLANE_TYPE_PRIMARY) {
-		liftoff_list_insert(&device->planes, &plane->link);
-	} else {
-		liftoff_list_for_each(cur, &device->planes, link) {
-			if (cur->type != DRM_PLANE_TYPE_PRIMARY &&
-			    plane->zpos >= cur->zpos) {
-				liftoff_list_insert(cur->link.prev, &plane->link);
-				break;
-			}
+	 * planes with FBs. */
+	liftoff_list_for_each(cur, &device->planes, link) {
+		if (plane->zpos >= cur->zpos) {
+			liftoff_list_insert(cur->link.prev, &plane->link);
+			break;
 		}
+	}
 
-		if (plane->link.next == NULL) { /* not inserted */
-			liftoff_list_insert(device->planes.prev, &plane->link);
-		}
+	if (plane->link.next == NULL) { /* not inserted */
+		liftoff_list_insert(device->planes.prev, &plane->link);
 	}
 
 	return plane;
