@@ -95,6 +95,8 @@ device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
 {
 	int ret;
 
+	system("sudo dmesg -C");
+
 	flags &= ~DRM_MODE_PAGE_FLIP_EVENT;
 	do {
 		ret = drmModeAtomicCommit(device->drm_fd, req,
@@ -105,6 +107,9 @@ device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
 	if (ret != 0 && ret != -EINVAL && ret != -ERANGE) {
 		liftoff_log(LIFTOFF_ERROR, "drmModeAtomicCommit: %s",
 			    strerror(-ret));
+	}
+	if (ret == -EINVAL || ret == -ERANGE) {
+		system("sudo dmesg");
 	}
 
 	return ret;
