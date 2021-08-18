@@ -141,6 +141,10 @@ layer_intersects(struct liftoff_layer *a, struct liftoff_layer *b)
 {
 	struct liftoff_rect ra, rb;
 
+	if (!layer_is_visible(a) || !layer_is_visible(b)) {
+		return false;
+	}
+
 	layer_get_rect(a, &ra);
 	layer_get_rect(b, &rb);
 
