@@ -2,12 +2,35 @@
 #define PRIVATE_H
 
 #include <libliftoff.h>
+#include <sys/types.h>
 #include "list.h"
 #include "log.h"
 
 /* Layer priority is assigned depending on the number of updates during a
  * given number of page-flips */
 #define LIFTOFF_PRIORITY_PERIOD 60
+
+/**
+ * List of well-known KMS properties.
+ *
+ * Keep core_property_index in sync.
+ */
+enum liftoff_core_property {
+	LIFTOFF_PROP_FB_ID,
+	LIFTOFF_PROP_CRTC_ID,
+	LIFTOFF_PROP_CRTC_X,
+	LIFTOFF_PROP_CRTC_Y,
+	LIFTOFF_PROP_CRTC_W,
+	LIFTOFF_PROP_CRTC_H,
+	LIFTOFF_PROP_SRC_X,
+	LIFTOFF_PROP_SRC_Y,
+	LIFTOFF_PROP_SRC_W,
+	LIFTOFF_PROP_SRC_H,
+	LIFTOFF_PROP_ZPOS,
+	LIFTOFF_PROP_ALPHA,
+	LIFTOFF_PROP_ROTATION,
+	LIFTOFF_PROP_LAST, /* keep last */
+};
 
 struct liftoff_device {
 	int drm_fd;
@@ -43,6 +66,7 @@ struct liftoff_layer {
 
 	struct liftoff_layer_property *props;
 	size_t props_len;
+	ssize_t core_props[LIFTOFF_PROP_LAST];
 
 	bool force_composition; /* FB needs to be composited */
 
@@ -56,6 +80,7 @@ struct liftoff_layer {
 struct liftoff_layer_property {
 	char name[DRM_PROP_NAME_LEN];
 	uint64_t value, prev_value;
+	ssize_t core_index;
 };
 
 struct liftoff_plane {
@@ -68,6 +93,7 @@ struct liftoff_plane {
 
 	struct liftoff_plane_property *props;
 	size_t props_len;
+	struct liftoff_plane_property *core_props[LIFTOFF_PROP_LAST];
 
 	struct liftoff_layer *layer;
 };
@@ -87,7 +113,7 @@ device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
 		   uint32_t flags);
 
 struct liftoff_layer_property *
-layer_get_property(struct liftoff_layer *layer, const char *name);
+layer_get_property(struct liftoff_layer *layer, enum liftoff_core_property prop);
 
 void
 layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect);
@@ -113,5 +139,8 @@ plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 
 void
 output_log_layers(struct liftoff_output *output);
+
+ssize_t
+core_property_index(const char *name);
 
 #endif

@@ -125,7 +125,7 @@ plane_step_init_next(struct alloc_step *step, struct alloc_step *prev,
 
 	zpos_prop = NULL;
 	if (layer != NULL) {
-		zpos_prop = layer_get_property(layer, "zpos");
+		zpos_prop = layer_get_property(layer, LIFTOFF_PROP_ZPOS);
 	}
 	if (zpos_prop != NULL && plane->type != DRM_PLANE_TYPE_PRIMARY) {
 		step->last_layer_zpos = zpos_prop->value;
@@ -168,7 +168,7 @@ has_composited_layer_over(struct liftoff_output *output,
 	struct liftoff_layer *other_layer;
 	struct liftoff_layer_property *zpos_prop, *other_zpos_prop;
 
-	zpos_prop = layer_get_property(layer, "zpos");
+	zpos_prop = layer_get_property(layer, LIFTOFF_PROP_ZPOS);
 	if (zpos_prop == NULL) {
 		return false;
 	}
@@ -178,7 +178,8 @@ has_composited_layer_over(struct liftoff_output *output,
 			continue;
 		}
 
-		other_zpos_prop = layer_get_property(other_layer, "zpos");
+		other_zpos_prop = layer_get_property(other_layer,
+						     LIFTOFF_PROP_ZPOS);
 		if (other_zpos_prop == NULL) {
 			continue;
 		}
@@ -201,7 +202,7 @@ has_allocated_layer_over(struct liftoff_output *output, struct alloc_step *step,
 	struct liftoff_layer *other_layer;
 	struct liftoff_layer_property *zpos_prop, *other_zpos_prop;
 
-	zpos_prop = layer_get_property(layer, "zpos");
+	zpos_prop = layer_get_property(layer, LIFTOFF_PROP_ZPOS);
 	if (zpos_prop == NULL) {
 		return false;
 	}
@@ -221,7 +222,8 @@ has_allocated_layer_over(struct liftoff_output *output, struct alloc_step *step,
 			continue;
 		}
 
-		other_zpos_prop = layer_get_property(other_layer, "zpos");
+		other_zpos_prop = layer_get_property(other_layer,
+						     LIFTOFF_PROP_ZPOS);
 		if (other_zpos_prop == NULL) {
 			continue;
 		}
@@ -284,7 +286,7 @@ check_layer_plane_compatible(struct alloc_step *step,
 		return false;
 	}
 
-	zpos_prop = layer_get_property(layer, "zpos");
+	zpos_prop = layer_get_property(layer, LIFTOFF_PROP_ZPOS);
 	if (zpos_prop != NULL) {
 		if ((int)zpos_prop->value > step->last_layer_zpos &&
 		    has_allocated_layer_over(output, step, layer)) {

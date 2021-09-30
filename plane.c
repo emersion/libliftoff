@@ -43,6 +43,7 @@ liftoff_plane_create(struct liftoff_device *device, uint32_t id)
 	struct liftoff_plane_property *prop;
 	uint64_t value;
 	bool has_type = false, has_zpos = false;
+	ssize_t core_prop_idx;
 
 	liftoff_list_for_each(plane, &device->planes, link) {
 		if (plane->id == id) {
@@ -103,6 +104,11 @@ liftoff_plane_create(struct liftoff_device *device, uint32_t id)
 			plane->zpos = value;
 			has_zpos = true;
 		}
+
+		core_prop_idx = core_property_index(prop->name);
+		if (core_prop_idx >= 0) {
+			plane->core_props[core_prop_idx] = prop;
+		}
 	}
 	drmModeFreeObjectProperties(drm_props);
 
@@ -159,12 +165,16 @@ liftoff_plane_get_id(struct liftoff_plane *plane)
 }
 
 static struct liftoff_plane_property *
-plane_get_property(struct liftoff_plane *plane, const char *name)
+plane_get_property(struct liftoff_plane *plane,
+		   const struct liftoff_layer_property *layer_prop)
 {
 	size_t i;
 
+	if (layer_prop->core_index >= 0)
+		return plane->core_props[layer_prop->core_index];
+
 	for (i = 0; i < plane->props_len; i++) {
-		if (strcmp(plane->props[i].name, name) == 0) {
+		if (strcmp(plane->props[i].name, layer_prop->name) == 0) {
 			return &plane->props[i];
 		}
 	}
@@ -188,16 +198,16 @@ plane_set_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
 }
 
 static int
-set_plane_prop_str(struct liftoff_plane *plane, drmModeAtomicReq *req,
-		   const char *name, uint64_t value)
+set_plane_core_prop(struct liftoff_plane *plane, drmModeAtomicReq *req,
+		    enum liftoff_core_property core_prop, uint64_t value)
 {
 	struct liftoff_plane_property *prop;
 
-	prop = plane_get_property(plane, name);
+	prop = plane->core_props[core_prop];
 	if (prop == NULL) {
 		liftoff_log(LIFTOFF_DEBUG,
-			    "plane %"PRIu32" is missing the %s property",
-			    plane->id, name);
+			    "plane %"PRIu32" is missing core property %d",
+			    plane->id, core_prop);
 		return -EINVAL;
 	}
 
@@ -216,33 +226,34 @@ plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 	cursor = drmModeAtomicGetCursor(req);
 
 	if (layer == NULL) {
-		ret = set_plane_prop_str(plane, req, "FB_ID", 0);
+		ret = set_plane_core_prop(plane, req, LIFTOFF_PROP_FB_ID, 0);
 		if (ret != 0) {
 			return ret;
 		}
-		return set_plane_prop_str(plane, req, "CRTC_ID", 0);
+		return set_plane_core_prop(plane, req, LIFTOFF_PROP_CRTC_ID, 0);
 	}
 
-	ret = set_plane_prop_str(plane, req, "CRTC_ID", layer->output->crtc_id);
+	ret = set_plane_core_prop(plane, req, LIFTOFF_PROP_CRTC_ID,
+				  layer->output->crtc_id);
 	if (ret != 0) {
 		return ret;
 	}
 
 	for (i = 0; i < layer->props_len; i++) {
 		layer_prop = &layer->props[i];
-		if (strcmp(layer_prop->name, "zpos") == 0) {
+		if (layer_prop->core_index == LIFTOFF_PROP_ZPOS) {
 			/* We don't yet support setting the zpos property. We
 			 * only use it (read-only) during plane allocation. */
 			continue;
 		}
 
-		plane_prop = plane_get_property(plane, layer_prop->name);
+		plane_prop = plane_get_property(plane, layer_prop);
 		if (plane_prop == NULL) {
-			if (strcmp(layer_prop->name, "alpha") == 0 &&
+			if (layer_prop->core_index == LIFTOFF_PROP_ALPHA &&
 			    layer_prop->value == 0xFFFF) {
 				continue; /* Layer is completely opaque */
 			}
-			if (strcmp(layer_prop->name, "rotation") == 0 &&
+			if (layer_prop->core_index == LIFTOFF_PROP_ROTATION &&
 			    layer_prop->value == DRM_MODE_ROTATE_0) {
 				continue; /* Layer isn't rotated */
 			}
