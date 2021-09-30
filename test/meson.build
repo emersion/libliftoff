@@ -69,6 +69,7 @@ tests = {
 		'default-rotation',
 		'ignore-alpha',
 		'immutable-zpos',
+		'unmatched',
 	],
 }
 

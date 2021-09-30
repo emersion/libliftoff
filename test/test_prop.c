@@ -243,6 +243,45 @@ test_immutable_zpos(void)
 	return 0;
 }
 
+static int
+test_unmatched_prop(void)
+{
+	struct liftoff_mock_plane *mock_plane;
+	int drm_fd;
+	struct liftoff_device *device;
+	struct liftoff_output *output;
+	struct liftoff_layer *layer;
+	drmModeAtomicReq *req;
+	int ret;
+
+	mock_plane = liftoff_mock_drm_create_plane(DRM_PLANE_TYPE_PRIMARY);
+
+	drm_fd = liftoff_mock_drm_open();
+	device = liftoff_device_create(drm_fd);
+	assert(device != NULL);
+
+	liftoff_device_register_all_planes(device);
+
+	output = liftoff_output_create(device, liftoff_mock_drm_crtc_id);
+	layer = add_layer(output, 0, 0, 1920, 1080);
+	liftoff_layer_set_property(layer, "asdf", 0); /* doesn't exist */
+
+	liftoff_mock_plane_add_compatible_layer(mock_plane, layer);
+
+	req = drmModeAtomicAlloc();
+	ret = liftoff_output_apply(output, req, 0);
+	assert(ret == 0);
+	ret = drmModeAtomicCommit(drm_fd, req, 0, NULL);
+	assert(ret == 0);
+	assert(liftoff_mock_plane_get_layer(mock_plane) == NULL);
+	drmModeAtomicFree(req);
+
+	liftoff_device_destroy(device);
+	close(drm_fd);
+
+	return 0;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -264,6 +303,8 @@ main(int argc, char *argv[])
 		return test_ignore_alpha();
 	} else if (strcmp(test_name, "immutable-zpos") == 0) {
 		return test_immutable_zpos();
+	} else if (strcmp(test_name, "unmatched") == 0) {
+		return test_unmatched_prop();
 	} else {
 		fprintf(stderr, "no such test: %s\n", test_name);
 		return 1;
