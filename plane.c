@@ -158,7 +158,7 @@ liftoff_plane_get_id(struct liftoff_plane *plane)
 	return plane->id;
 }
 
-struct liftoff_plane_property *
+static struct liftoff_plane_property *
 plane_get_property(struct liftoff_plane *plane, const char *name)
 {
 	size_t i;

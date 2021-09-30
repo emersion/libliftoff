@@ -107,9 +107,6 @@ layer_has_fb(struct liftoff_layer *layer);
 bool
 layer_is_visible(struct liftoff_layer *layer);
 
-struct liftoff_plane_property *
-plane_get_property(struct liftoff_plane *plane, const char *name);
-
 int
 plane_apply(struct liftoff_plane *plane, struct liftoff_layer *layer,
 	    drmModeAtomicReq *req);
