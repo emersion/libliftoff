@@ -680,6 +680,7 @@ liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	}
 	log_no_reuse(output);
 
+	device->test_commit_counter = 0;
 	output_log_layers(output);
 
 	/* Unset all existing plane and layer mappings. */
@@ -739,8 +740,9 @@ liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	}
 
 	liftoff_log(LIFTOFF_DEBUG,
-		    "Found plane allocation for output %p (score: %d, candidate planes: %zu):",
-		    (void *)output, result.best_score, candidate_planes);
+		    "Found plane allocation for output %p (score: %d, candidate planes: %zu, tests: %d):",
+		    (void *)output, result.best_score, candidate_planes,
+		    device->test_commit_counter);
 
 	/* Apply the best allocation */
 	i = 0;

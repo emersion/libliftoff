@@ -19,6 +19,7 @@ struct liftoff_device {
 	size_t crtcs_len;
 
 	int page_flip_counter;
+	int test_commit_counter;
 };
 
 struct liftoff_output {
