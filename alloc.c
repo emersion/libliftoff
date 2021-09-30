@@ -1,9 +1,11 @@
+#define _POSIX_C_SOURCE 200112L
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include "log.h"
 #include "private.h"
@@ -76,6 +78,8 @@ struct alloc_result {
 	struct liftoff_layer **best;
 	int best_score;
 
+	struct timespec started_at;
+
 	/* per-output */
 	bool has_composition_layer;
 	size_t non_composition_layers_len;
@@ -94,6 +98,29 @@ struct alloc_step {
 
 	char log_prefix[64];
 };
+
+#define NSEC_PER_SEC (1000 * 1000 * 1000)
+
+static int64_t
+timespec_to_nsec(struct timespec ts)
+{
+	return (int64_t)ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
+}
+
+static const int64_t ALLOC_TIMEOUT_NSEC = 1000 * 1000; // 1ms
+
+static bool
+check_deadline(struct timespec start)
+{
+	struct timespec now = {0};
+	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+		liftoff_log_errno(LIFTOFF_ERROR, "clock_gettime");
+		return false;
+	}
+
+	int64_t deadline = timespec_to_nsec(start) + ALLOC_TIMEOUT_NSEC;
+	return timespec_to_nsec(now) < deadline;
+}
 
 static void
 plane_step_init_next(struct alloc_step *step, struct alloc_step *prev,
@@ -425,6 +452,12 @@ output_choose_layers(struct liftoff_output *output, struct alloc_result *result,
 			continue;
 		}
 
+		if (!check_deadline(result->started_at)) {
+			liftoff_log(LIFTOFF_DEBUG, "%s Deadline exceeded",
+				    step->log_prefix);
+			break;
+		}
+
 		/* Try to use this layer for the current plane */
 		ret = plane_apply(plane, layer, result->req);
 		if (ret == -EINVAL) {
@@ -717,6 +750,11 @@ liftoff_output_apply(struct liftoff_output *output, drmModeAtomicReq *req,
 	if (step.alloc == NULL || result.best == NULL) {
 		liftoff_log_errno(LIFTOFF_ERROR, "malloc");
 		return -ENOMEM;
+	}
+
+	if (clock_gettime(CLOCK_MONOTONIC, &result.started_at) != 0) {
+		liftoff_log_errno(LIFTOFF_ERROR, "clock_gettime");
+		return -errno;
 	}
 
 	/* For each plane, try to find a layer. Don't do it the other
