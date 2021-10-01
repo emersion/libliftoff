@@ -38,6 +38,7 @@ liftoff_lib = library(
 		'log.c',
 		'output.c',
 		'plane.c',
+		'trace.c',
 	),
 	include_directories: liftoff_inc,
 	version: meson.project_version(),

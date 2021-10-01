@@ -20,6 +20,8 @@ liftoff_device_create(int drm_fd)
 	liftoff_list_init(&device->planes);
 	liftoff_list_init(&device->outputs);
 
+	liftoff_tracer_init(&device->tracer);
+
 	device->drm_fd = dup(drm_fd);
 	if (device->drm_fd < 0) {
 		liftoff_log_errno(LIFTOFF_ERROR, "dup");
@@ -59,6 +61,7 @@ liftoff_device_destroy(struct liftoff_device *device)
 		return;
 	}
 
+	liftoff_tracer_finish(&device->tracer);
 	close(device->drm_fd);
 	liftoff_list_for_each_safe(plane, tmp, &device->planes, link) {
 		liftoff_plane_destroy(plane);
@@ -97,12 +100,20 @@ device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
 
 	device->test_commit_counter++;
 
+	liftoff_tracer_mark(&device->tracer,
+			    "device_test_commit (begin_ctx=%d)",
+			    device->test_commit_counter);
+
 	flags &= ~DRM_MODE_PAGE_FLIP_EVENT;
 	do {
 		ret = drmModeAtomicCommit(device->drm_fd, req,
 					  DRM_MODE_ATOMIC_TEST_ONLY | flags,
 					  NULL);
 	} while (ret == -EINTR || ret == -EAGAIN);
+
+	liftoff_tracer_mark(&device->tracer,
+			    "device_test_commit (end_ctx=%d)",
+			    device->test_commit_counter);
 
 	if (ret != 0 && ret != -EINVAL && ret != -ERANGE) {
 		liftoff_log(LIFTOFF_ERROR, "drmModeAtomicCommit: %s",
