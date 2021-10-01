@@ -4,6 +4,7 @@
 #include <libliftoff.h>
 #include "list.h"
 #include "log.h"
+#include "trace.h"
 
 /* Layer priority is assigned depending on the number of updates during a
  * given number of page-flips */
@@ -18,6 +19,7 @@ struct liftoff_device {
 	uint32_t *crtcs;
 	size_t crtcs_len;
 
+	struct liftoff_tracer tracer;
 	int page_flip_counter;
 	int test_commit_counter;
 };
