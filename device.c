@@ -104,7 +104,9 @@ device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
 					  NULL);
 	} while (ret == -EINTR || ret == -EAGAIN);
 
-	if (ret != 0 && ret != -EINVAL && ret != -ERANGE) {
+	/* The kernel will return -EINVAL for invalid configuration, -ERANGE for
+	 * CRTC coords overflow, and -ENOSPC for invalid SRC coords. */
+	if (ret != 0 && ret != -EINVAL && ret != -ERANGE && ret != -ENOSPC) {
 		liftoff_log(LIFTOFF_ERROR, "drmModeAtomicCommit: %s",
 			    strerror(-ret));
 	}

@@ -448,13 +448,14 @@ output_choose_layers(struct liftoff_output *output, struct alloc_result *result,
 			if (ret != 0) {
 				return ret;
 			}
-		} else if (ret != -EINVAL && ret != -ERANGE) {
+		} else if (ret != -EINVAL && ret != -ERANGE && ret != -ENOSPC) {
 			return ret;
 		} else {
 			liftoff_log(LIFTOFF_DEBUG,
 				    "%s Layer %p -> plane %"PRIu32": "
-				    "test-only commit failed",
-				    step->log_prefix, (void *)layer, plane->id);
+				    "test-only commit failed (%s)",
+				    step->log_prefix, (void *)layer, plane->id,
+				    strerror(-ret));
 		}
 
 		drmModeAtomicSetCursor(result->req, cursor);
