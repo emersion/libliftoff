@@ -4,6 +4,10 @@
 
 Lightweight KMS plane library.
 
+> ### This project has moved
+>
+> This project has [moved to gitlab.freedesktop.org](https://gitlab.freedesktop.org/emersion/libliftoff).
+
 libliftoff eases the use of KMS planes from userspace without standing in your
 way. Users create "virtual planes" called layers, set KMS properties on them,
 and libliftoff will pick planes for these layers if possible.
