@@ -7,6 +7,7 @@ struct liftoff_layer *
 liftoff_layer_create(struct liftoff_output *output)
 {
 	struct liftoff_layer *layer;
+	size_t i;
 
 	layer = calloc(1, sizeof(*layer));
 	if (layer == NULL) {
@@ -14,6 +15,9 @@ liftoff_layer_create(struct liftoff_output *output)
 		return NULL;
 	}
 	layer->output = output;
+	for (i = 0; i < LIFTOFF_PROP_LAST; i++) {
+		layer->core_props[i] = -1;
+	}
 	liftoff_list_insert(output->layers.prev, &layer->link);
 	output->layers_changed = true;
 	return layer;
@@ -39,16 +43,14 @@ liftoff_layer_destroy(struct liftoff_layer *layer)
 }
 
 struct liftoff_layer_property *
-layer_get_property(struct liftoff_layer *layer, const char *name)
+layer_get_property(struct liftoff_layer *layer, enum liftoff_core_property prop)
 {
-	size_t i;
+	ssize_t i;
 
-	for (i = 0; i < layer->props_len; i++) {
-		if (strcmp(layer->props[i].name, name) == 0) {
-			return &layer->props[i];
-		}
-	}
-	return NULL;
+	i = layer->core_props[prop];
+	if (i < 0)
+		return NULL;
+	return &layer->props[i];
 }
 
 int
@@ -57,6 +59,8 @@ liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 {
 	struct liftoff_layer_property *props;
 	struct liftoff_layer_property *prop;
+	ssize_t core_prop_idx;
+	size_t i;
 
 	if (strcmp(name, "CRTC_ID") == 0) {
 		liftoff_log(LIFTOFF_ERROR,
@@ -64,7 +68,19 @@ liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 		return -EINVAL;
 	}
 
-	prop = layer_get_property(layer, name);
+	prop = NULL;
+	core_prop_idx = core_property_index(name);
+	if (core_prop_idx >= 0) {
+		prop = layer_get_property(layer, core_prop_idx);
+	} else {
+		for (i = 0; i < layer->props_len; i++) {
+			if (strcmp(layer->props[i].name, name) == 0) {
+				prop = &layer->props[i];
+				break;
+			}
+		}
+	}
+
 	if (prop == NULL) {
 		props = realloc(layer->props, (layer->props_len + 1)
 				* sizeof(struct liftoff_layer_property));
@@ -75,11 +91,17 @@ liftoff_layer_set_property(struct liftoff_layer *layer, const char *name,
 		layer->props = props;
 		layer->props_len++;
 
-		prop = &layer->props[layer->props_len - 1];
+		i = layer->props_len - 1;
+		prop = &layer->props[i];
 		memset(prop, 0, sizeof(*prop));
 		strncpy(prop->name, name, sizeof(prop->name) - 1);
+		prop->core_index = core_prop_idx;
 
 		layer->changed = true;
+
+		if (core_prop_idx >= 0) {
+			layer->core_props[core_prop_idx] = i;
+		}
 	}
 
 	prop->value = value;
@@ -125,10 +147,10 @@ layer_get_rect(struct liftoff_layer *layer, struct liftoff_rect *rect)
 {
 	struct liftoff_layer_property *x_prop, *y_prop, *w_prop, *h_prop;
 
-	x_prop = layer_get_property(layer, "CRTC_X");
-	y_prop = layer_get_property(layer, "CRTC_Y");
-	w_prop = layer_get_property(layer, "CRTC_W");
-	h_prop = layer_get_property(layer, "CRTC_H");
+	x_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_X);
+	y_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_Y);
+	w_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_W);
+	h_prop = layer_get_property(layer, LIFTOFF_PROP_CRTC_H);
 
 	rect->x = x_prop != NULL ? x_prop->value : 0;
 	rect->y = y_prop != NULL ? y_prop->value : 0;
@@ -178,7 +200,7 @@ layer_update_priority(struct liftoff_layer *layer, bool make_current)
 	struct liftoff_layer_property *prop;
 
 	/* TODO: also bump priority when updating other properties */
-	prop = layer_get_property(layer, "FB_ID");
+	prop = layer_get_property(layer, LIFTOFF_PROP_FB_ID);
 	if (prop != NULL && prop->prev_value != prop->value) {
 		layer->pending_priority++;
 	}
@@ -195,7 +217,7 @@ layer_has_fb(struct liftoff_layer *layer)
 {
 	struct liftoff_layer_property *fb_id_prop;
 
-	fb_id_prop = layer_get_property(layer, "FB_ID");
+	fb_id_prop = layer_get_property(layer, LIFTOFF_PROP_FB_ID);
 	return fb_id_prop != NULL && fb_id_prop->value != 0;
 }
 
@@ -204,7 +226,7 @@ layer_is_visible(struct liftoff_layer *layer)
 {
 	struct liftoff_layer_property *alpha_prop;
 
-	alpha_prop = layer_get_property(layer, "alpha");
+	alpha_prop = layer_get_property(layer, LIFTOFF_PROP_ALPHA);
 	if (alpha_prop != NULL && alpha_prop->value == 0) {
 		return false; /* fully transparent */
 	}

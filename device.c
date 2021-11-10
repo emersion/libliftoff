@@ -113,3 +113,36 @@ device_test_commit(struct liftoff_device *device, drmModeAtomicReq *req,
 
 	return ret;
 }
+
+ssize_t
+core_property_index(const char *name)
+{
+	if (strcmp(name, "FB_ID") == 0) {
+		return LIFTOFF_PROP_FB_ID;
+	} else if (strcmp(name, "CRTC_ID") == 0) {
+		return LIFTOFF_PROP_CRTC_ID;
+	} else if (strcmp(name, "CRTC_X") == 0) {
+		return LIFTOFF_PROP_CRTC_X;
+	} else if (strcmp(name, "CRTC_Y") == 0) {
+		return LIFTOFF_PROP_CRTC_Y;
+	} else if (strcmp(name, "CRTC_W") == 0) {
+		return LIFTOFF_PROP_CRTC_W;
+	} else if (strcmp(name, "CRTC_H") == 0) {
+		return LIFTOFF_PROP_CRTC_H;
+	} else if (strcmp(name, "SRC_X") == 0) {
+		return LIFTOFF_PROP_SRC_X;
+	} else if (strcmp(name, "SRC_Y") == 0) {
+		return LIFTOFF_PROP_SRC_Y;
+	} else if (strcmp(name, "SRC_W") == 0) {
+		return LIFTOFF_PROP_SRC_W;
+	} else if (strcmp(name, "SRC_H") == 0) {
+		return LIFTOFF_PROP_SRC_H;
+	} else if (strcmp(name, "zpos") == 0) {
+		return LIFTOFF_PROP_ZPOS;
+	} else if (strcmp(name, "alpha") == 0) {
+		return LIFTOFF_PROP_ALPHA;
+	} else if (strcmp(name, "rotation") == 0) {
+		return LIFTOFF_PROP_ROTATION;
+	}
+	return -1;
+}
