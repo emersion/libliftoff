@@ -465,6 +465,26 @@ static struct test_case tests[] = {
 		},
 	},
 	{
+		.name = "zpos-2x-reverse",
+		/* Layer on top comes first */
+		.layers = {
+			{
+				.width = 100,
+				.height = 100,
+				.zpos = 2,
+				.compat = { PRIMARY_PLANE, OVERLAY_PLANE },
+				.result = OVERLAY_PLANE,
+			},
+			{
+				.width = 1920,
+				.height = 1080,
+				.zpos = 1,
+				.compat = { PRIMARY_PLANE, OVERLAY_PLANE },
+				.result = PRIMARY_PLANE,
+			},
+		},
+	},
+	{
 		.name = "composition-3x",
 		.layers = {
 			{
